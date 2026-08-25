@@ -9,7 +9,7 @@ plus à assembler le jour de la démo.
 Un module = une personne = un fichier = une fonction publique.
 
 Personne ne touche au fichier d'un autre. Personne ne modifie lib/common.sh
-sauf le responsable du socle (Marwan). Si tu as besoin d'un truc dans le socle,
+sauf le responsable du socle (Alvi). Si tu as besoin d'un truc dans le socle,
 tu le demandes, tu ne l'ajoutes pas toi-même — sinon deux personnes réécrivent
 la même fonction et git n'arrive plus à merger.
 
@@ -82,7 +82,7 @@ Tu n'as pas besoin que les autres aient fini pour tester le tien.
 - [ ] Le module déclenche bien une alerte quand tools/simulate_attack.sh
       injecte la menace correspondante
 - [ ] Zéro seuil en dur, zéro chemin de log en dur
-- [ ] Reviewé par Marwan, mergé sur main
+- [ ] Reviewé par Alvi, mergé sur main
 
 ## Points de synchro (15 min, pas plus)
 
