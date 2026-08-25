@@ -1,0 +1,14 @@
+# Runtime output — regenerated on every run, never commit
+logs/
+state/
+*.log
+*.jsonl
+/var/log/hids/
+/var/lib/hids/
+
+# Editor / OS noise
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
