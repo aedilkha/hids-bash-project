@@ -247,7 +247,14 @@ check_new_services() {
 run_process_network() {
     section "MODULE 3 - PROCESS AND NETWORK"
     check_suspicious_paths
-    # TODO: add the other calls as you write them
+    check_deleted_binaries
+    check_high_resource
+    check_listening_ports
+    check_outbound
+    check_reverse_shell
+    check_cron_jobs
+    check_new_services
     return 0
+}
 }
 
