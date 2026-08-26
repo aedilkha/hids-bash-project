@@ -77,6 +77,25 @@ check_deleted_binaries() {
     return 0
 }
 
+# check_high_resource: a process pinned at high CPU or memory for a sustained
+# period is a common sign of cryptomining or other malicious background load.
+# Source: ps -eo pcpu,pmem (percent CPU / percent memory per process).
+check_high_resource() {
+    local pid user pcpu pmem cmdline found=0
+    while read -r pid user pcpu pmem; do
+        [[ "$pid" == "PID" ]] && continue
+        cmdline="$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)"
+        if (( $(echo "$pcpu >= $CPU_PROCESS_ALERT" | bc -l 2>/dev/null) )); then
+            alert HIGH "PRC-003" "$pid" "High CPU usage: pid $pid, user $user, cpu ${pcpu}%, cmd: ${cmdline:0:80}"
+            found=1
+        elif (( $(echo "$pmem >= $MEM_PROCESS_ALERT" | bc -l 2>/dev/null) )); then
+            alert HIGH "PRC-003" "$pid" "High memory usage: pid $pid, user $user, mem ${pmem}%, cmd: ${cmdline:0:80}"
+            found=1
+        fi
+    done < <(ps -eo pid,user,pcpu,pmem --no-headers 2>/dev/null)
+    (( found == 0 )) && ok "No process exceeding CPU/memory thresholds"
+    return 0
+}
 
 # run_process_network: PUBLIC ENTRY POINT.
 run_process_network() {
