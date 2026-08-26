@@ -97,6 +97,34 @@ check_high_resource() {
     return 0
 }
 
+# check_listening_ports: any listening port outside PORT_WHITELIST is a
+# potential backdoor or unexpected service. 0.0.0.0 (network-exposed) is
+# more severe than 127.0.0.1/::1 (localhost only).
+# Source: ss -tulnp (listening TCP/UDP sockets + owning process).
+check_listening_ports() {
+    local proto localaddr port proc found=0
+    while read -r proto _ _ _ localaddr _ proc; do
+        [[ "$proto" == "Netid" ]] && continue
+        [[ -z "$localaddr" ]] && continue
+        port="${localaddr##*:}"
+        [[ "$port" =~ ^[0-9]+$ ]] || continue
+
+        if [[ ! " $PORT_WHITELIST " =~ " $port " ]]; then
+            case "$localaddr" in
+                127.0.0.1:*|\[::1\]:*)
+                    alert MEDIUM "NET-001" "$port" "Unexpected port (localhost only): $localaddr, proto $proto, proc: ${proc:-unknown, needs sudo}"
+                    ;;
+                *)
+                    alert HIGH "NET-001" "$port" "Unexpected port (network-exposed): $localaddr, proto $proto, proc: ${proc:-unknown, needs sudo}"
+                    ;;
+            esac
+            found=1
+        fi
+    done < <(ss -tulnp 2>/dev/null)
+    (( found == 0 )) && ok "No listening port outside PORT_WHITELIST"
+    return 0
+}
+
 # run_process_network: PUBLIC ENTRY POINT.
 run_process_network() {
     section "MODULE 3 - PROCESS AND NETWORK"
