@@ -152,6 +152,31 @@ check_outbound() {
     return 0
 }
 
+# check_reverse_shell: a shell-type process (bash, sh, nc, python, perl...)
+# holding an active network connection is a classic reverse-shell pattern —
+# legitimate shells talk to your terminal, not a remote socket.
+# Source: ss -tupn (owning process) cross-referenced against shell binary names.
+check_reverse_shell() {
+    local proto localaddr peeraddr proc pid comm found=0
+    while read -r proto _ _ localaddr peeraddr proc; do
+        [[ "$proto" == "Netid" ]] && continue
+        [[ -z "$proc" ]] && continue
+
+        pid="$(grep -oP 'pid=\K[0-9]+' <<< "$proc")"
+        [[ -z "$pid" ]] && continue
+        comm="$(ps -o comm= -p "$pid" 2>/dev/null)"
+
+        case "$comm" in
+            bash|sh|dash|nc|ncat|netcat|python*|perl|ruby|php)
+                alert HIGH "PRC-004" "$pid" "Shell-like process with network connection: comm=$comm, pid=$pid, local=$localaddr, peer=$peeraddr"
+                found=1
+                ;;
+        esac
+    done < <(ss -tupn 2>/dev/null)
+    (( found == 0 )) && ok "No shell process holding an active network connection"
+    return 0
+}
+
 # run_process_network: PUBLIC ENTRY POINT.
 run_process_network() {
     section "MODULE 3 - PROCESS AND NETWORK"
