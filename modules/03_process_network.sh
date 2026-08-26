@@ -125,6 +125,33 @@ check_listening_ports() {
     return 0
 }
 
+# check_outbound: established connections to public IPs are logged as
+# context (not alerts) — outbound traffic is normal, but a human reviewer
+# should see the full list to judge if anything looks out of place.
+# Source: ss -tupn state established (active TCP/UDP connections).
+check_outbound() {
+    local proto localaddr peeraddr proc peer_ip found=0
+    while read -r proto _ _ localaddr peeraddr proc; do
+        [[ "$proto" == "Netid" ]] && continue
+        [[ -z "$peeraddr" ]] && continue
+        peer_ip="${peeraddr%:*}"
+        peer_ip="${peer_ip#\[}"
+        peer_ip="${peer_ip%\]}"
+
+        case "$peer_ip" in
+            10.*|172.1[6-9].*|172.2[0-9].*|172.3[0-1].*|192.168.*|127.*|::1)
+                continue
+                ;;
+            *)
+                kv "outbound" "Established connection to public IP: $peer_ip (local: $localaddr), proto $proto, proc: ${proc:-unknown, needs sudo}"
+                found=1
+                ;;
+        esac
+    done < <(ss -tupn state established 2>/dev/null)
+    (( found == 0 )) && ok "No established outbound connections to public IPs"
+    return 0
+}
+
 # run_process_network: PUBLIC ENTRY POINT.
 run_process_network() {
     section "MODULE 3 - PROCESS AND NETWORK"
