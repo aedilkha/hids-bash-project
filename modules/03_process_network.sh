@@ -211,6 +211,38 @@ check_cron_jobs() {
     (( found == 0 )) && ok "No suspicious cron entries found"
     return 0
 }
+
+# check_new_services: a systemd service present now but absent from a saved
+# baseline snapshot is a common persistence mechanism — attacker installs a
+# service so their code auto-starts on every boot.
+# Source: systemctl list-units --type=service, compared against a saved
+# baseline file (data/baseline_services.txt), created on first run.
+check_new_services() {
+    local baseline_file="data/baseline_services.txt"
+    local current_services svc found=0
+
+    mkdir -p "$(dirname "$baseline_file")" 2>/dev/null
+
+    current_services="$(systemctl list-units --type=service --no-legend 2>/dev/null | awk '{print $1}' | sort)"
+
+    if [[ ! -f "$baseline_file" ]]; then
+        echo "$current_services" > "$baseline_file"
+        ok "Baseline created with $(wc -l < "$baseline_file") services (first run, nothing to compare yet)"
+        return 0
+    fi
+
+    while read -r svc; do
+        [[ -z "$svc" ]] && continue
+        if ! grep -qxF "$svc" "$baseline_file"; then
+            alert MEDIUM "PRC-006" "$svc" "New systemd service not in baseline: $svc"
+            found=1
+        fi
+    done <<< "$current_services"
+
+    (( found == 0 )) && ok "No new systemd services since baseline"
+    return 0
+}
+
 # run_process_network: PUBLIC ENTRY POINT.
 run_process_network() {
     section "MODULE 3 - PROCESS AND NETWORK"
