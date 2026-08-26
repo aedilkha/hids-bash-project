@@ -29,7 +29,7 @@ What this imposes on our tool:
 3. Dual output: human-readable text + parsable JSON (alerts.jsonl).
 4. A dedup mechanism (ALERT_COOLDOWN) and per-module whitelists in the config.
 
-## 1. System health  (Marwan)
+## 1. System health  (Alvi)
 
 Which aspects reveal whether a system is healthy or under stress?
 CPU load, available memory, disk space and inodes, zombie processes, an
