@@ -84,7 +84,7 @@ check_high_resource() {
     local pid user pcpu pmem cmdline found=0
     while read -r pid user pcpu pmem; do
         [[ "$pid" == "PID" ]] && continue
-        cmdline="$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)"
+      cmdline="$(tr '\0' ' ' 2>/dev/null < "/proc/$pid/cmdline")"
         if (( $(echo "$pcpu >= $CPU_PROCESS_ALERT" | bc -l 2>/dev/null) )); then
             alert HIGH "PRC-003" "$pid" "High CPU usage: pid $pid, user $user, cpu ${pcpu}%, cmd: ${cmdline:0:80}"
             found=1
