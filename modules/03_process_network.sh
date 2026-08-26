@@ -177,6 +177,40 @@ check_reverse_shell() {
     return 0
 }
 
+# check_cron_jobs: cron entries containing wget/curl, base64, or a pipe into
+# a shell are a common persistence mechanism — attacker code that re-downloads
+# and re-executes itself on a schedule, surviving a manual cleanup.
+# Source: /etc/cron* (system-wide) and crontab -l (per-user).
+check_cron_jobs() {
+    local line user found=0
+
+    # System-wide cron files
+    while read -r line; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        case "$line" in
+            *wget*|*curl*|*base64*|*'| bash'*|*'|bash'*|*'| sh'*|*'|sh'*)
+                alert HIGH "PRC-005" "system-cron" "Suspicious system cron entry: ${line:0:100}"
+                found=1
+                ;;
+        esac
+    done < <(cat /etc/crontab /etc/cron.d/* 2>/dev/null)
+
+    # Per-user crontabs
+    for user in $(cut -d: -f1 /etc/passwd); do
+        while read -r line; do
+            [[ -z "$line" || "$line" == \#* ]] && continue
+            case "$line" in
+                *wget*|*curl*|*base64*|*'| bash'*|*'|bash'*|*'| sh'*|*'|sh'*)
+                    alert HIGH "PRC-005" "$user" "Suspicious cron entry for user $user: ${line:0:100}"
+                    found=1
+                    ;;
+            esac
+        done < <(crontab -u "$user" -l 2>/dev/null)
+    done
+
+    (( found == 0 )) && ok "No suspicious cron entries found"
+    return 0
+}
 # run_process_network: PUBLIC ENTRY POINT.
 run_process_network() {
     section "MODULE 3 - PROCESS AND NETWORK"
