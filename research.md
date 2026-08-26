@@ -73,7 +73,7 @@ What is suspicious on a production server only the team manages:
 your VM. Paste 2-3 real lines and explain the structure of a line (fields,
 position of the IP and the user for awk).
 
-## 3. Processes and network  (Jakub)  [TO COMPLETE]
+## 3. Processes and network  (Jakub)  [COMPLETED]
 
 Full picture of what is running:
 ps -eo user,pid,ppid,pcpu,pmem,lstart,comm,args. For live info with no tool:
@@ -95,9 +95,19 @@ Network red flags: an unknown listening port (4444 = Metasploit default), a
 listener on 0.0.0.0 for a service that should be local, an outbound connection
 to an unknown public IP (call home to the attacker's C2).
 
-[TO COMPLETE]: run ss -tulnp and ps auxf on your VM. Explain the difference
-between a listener on 127.0.0.1 (local) and on 0.0.0.0 (exposed), and why that
-justifies two different severities.
+VM capture (Jakub, Kali):
+
+$ sudo ss -tulnp
+tcp   LISTEN   0.0.0.0:22   users:(("sshd",pid=139895,fd=6))
+tcp   LISTEN   [::]:22      users:(("sshd",pid=139895,fd=7))
+
+$ ps auxf
+root  139895  sshd: /usr/sbin/sshd -D [listener] 0 of 10-100
+
+ss -tulnp shows sshd listening on port 22, on all interfaces (0.0.0.0), meaning it accepts connections from any machine that can route to this host, not just localhost. ps auxf confirms the same process (matching PID 139895) running as root.
+
+127.0.0.1 vs 0.0.0.0, and why severity differs:
+A listener on 127.0.0.1 only accepts connections from the machine itself, nothing external can reach it even on the same LAN. A listener on 0.0.0.0 accepts connections from any reachable network, which is real exposed attack surface. Same service, same port, but very different risk. Our tool should flag 0.0.0.0 listeners with higher severity than 127.0.0.1 ones, since the latter is not attacker-reachable from outside the box.
 
 ## 4. File integrity  (Tom)  [TO COMPLETE]
 
