@@ -55,13 +55,6 @@ check_suspicious_paths() {
     return 0
 }
 
-# run_process_network: PUBLIC ENTRY POINT.
-run_process_network() {
-    section "MODULE 3 - PROCESS AND NETWORK"
-    check_suspicious_paths
-    # TODO: add the other calls as you write them
-    return 0
-}
 
 # check_deleted_binaries: a process whose on-disk binary has been deleted
 # is running purely from memory, hiding itself from file-based scans.
@@ -83,3 +76,13 @@ check_deleted_binaries() {
     (( found == 0 )) && ok "No process is running from a deleted binary"
     return 0
 }
+
+
+# run_process_network: PUBLIC ENTRY POINT.
+run_process_network() {
+    section "MODULE 3 - PROCESS AND NETWORK"
+    check_suspicious_paths
+    # TODO: add the other calls as you write them
+    return 0
+}
+
