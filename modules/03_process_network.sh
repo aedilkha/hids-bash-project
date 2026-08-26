@@ -62,3 +62,24 @@ run_process_network() {
     # TODO: add the other calls as you write them
     return 0
 }
+
+# check_deleted_binaries: a process whose on-disk binary has been deleted
+# is running purely from memory, hiding itself from file-based scans.
+# Source: /proc/<pid>/exe symlink target via readlink.
+check_deleted_binaries() {
+    local pid exe owner cmdline found=0
+    for pid in $(ps -eo pid --no-headers 2>/dev/null); do
+        exe="$(readlink "/proc/$pid/exe" 2>/dev/null)" || continue
+        [[ -z "$exe" ]] && continue
+        case "$exe" in
+            *"(deleted)")
+                owner="$(stat -c '%U' "/proc/$pid" 2>/dev/null)"
+                cmdline="$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)"
+                alert HIGH "PRC-002" "$exe" "Deleted binary still running: pid $pid, user $owner, cmd: ${cmdline:0:80}"
+                found=1
+                ;;
+        esac
+    done
+    (( found == 0 )) && ok "No process is running from a deleted binary"
+    return 0
+}
