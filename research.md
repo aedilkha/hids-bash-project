@@ -109,7 +109,7 @@ ss -tulnp shows sshd listening on port 22, on all interfaces (0.0.0.0), meaning 
 127.0.0.1 vs 0.0.0.0, and why severity differs:
 A listener on 127.0.0.1 only accepts connections from the machine itself, nothing external can reach it even on the same LAN. A listener on 0.0.0.0 accepts connections from any reachable network, which is real exposed attack surface. Same service, same port, but very different risk. Our tool should flag 0.0.0.0 listeners with higher severity than 127.0.0.1 ones, since the latter is not attacker-reachable from outside the box.
 
-## 4. File integrity  (Tom)  [TO COMPLETE]
+## 4. File integrity  (Tom)  [COMPLETED]
 
 Files critical enough that an unexpected change should trigger an alert:
 /etc/passwd, /etc/shadow, /etc/sudoers, /etc/ssh/sshd_config, /etc/crontab, the
@@ -127,8 +127,62 @@ sha256sum of each watched file, stored on the first run. On later runs,
 recompute and compare. stat -c '%Y' (mtime) and find /etc -mtime -1 to spot a
 recent modification.
 
-[TO COMPLETE]: run find / -perm -4000 -type f 2>/dev/null on your VM, list the
-SUID found, and explain which are legitimate (they are in SUID_WHITELIST).
+VM capture (Tom, Fedora):
+
+  $ find / -perm -4000 -type f 2>/dev/null | sort
+
+The following 29 SUID files were found. These 11 are explicitly allowed by
+SUID_WHITELIST in hids.conf:
+
+  /usr/bin/chfn                 /usr/bin/chsh
+  /usr/bin/fusermount3         /usr/bin/gpasswd
+  /usr/bin/mount               /usr/bin/newgrp
+  /usr/bin/passwd              /usr/bin/pkexec
+  /usr/bin/su                  /usr/bin/sudo
+  /usr/bin/umount
+
+They legitimately need a controlled privilege transition for operations such
+as changing an account password or shell, managing groups, mounting a
+filesystem, or executing an authorized administrative command. The whitelist
+also contains /usr/lib/openssh/ssh-keysign, but that file is not installed on
+this VM.
+
+The other 18 SUID files found are:
+
+  /usr/bin/at
+  /usr/bin/chage
+  /usr/bin/crontab
+  /usr/bin/fusermount
+  /usr/bin/fusermount-glusterfs
+  /usr/bin/grub2-set-bootflag
+  /usr/bin/mount.nfs
+  /usr/bin/nvidia-modprobe
+  /usr/bin/pam_timestamp_check
+  /usr/bin/unix_chkpwd
+  /usr/bin/userhelper
+  /usr/bin/vmware-user-suid-wrapper
+  /usr/lib64/cef/chrome-sandbox
+  /usr/libexec/dbus-1/dbus-daemon-launch-helper
+  /usr/libexec/qemu-bridge-helper
+  /usr/libexec/spice-gtk-x86_64/spice-client-glib-usb-acl-helper
+  /usr/lib/polkit-1/polkit-agent-helper-1
+  /usr/share/code/chrome-sandbox
+
+I checked each path with `rpm -qf`. All are owned by installed Fedora or
+third-party packages, including shadow-utils, cronie, fuse, GRUB, NFS, PAM,
+open-vm-tools, D-Bus, QEMU, SPICE, Polkit, CEF and VS Code. Their SUID bit has
+a plausible purpose: scheduled jobs, authentication helpers, mounting,
+virtualization/device access, or Chromium sandbox setup. Package ownership is
+evidence that they are expected, but not proof that they are unmodified; RPM
+verification and a hash baseline provide the stronger integrity check.
+
+This capture also exposes a configuration issue: these 18 legitimate files
+are not currently in SUID_WHITELIST, so a strict whitelist-only check would
+report false positives on this Fedora host. The safe design is to record the
+complete SUID set during `--baseline`, then alert when a new path appears,
+while keeping SUID_WHITELIST limited to reviewed exceptions. An unexpected
+SUID binary, especially one outside an RPM package or in a writable directory,
+should be treated as a possible privilege-escalation backdoor.
 
 ## 5. Logging and alerting  (Alvi)
 
