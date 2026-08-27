@@ -22,10 +22,12 @@ check_load_average() {
     kv "Load (1/5/15 min)" "$load1 / $load5 / $load15  (${cores} cores)"
     kv "Load per core"     "$ratio"
 
+    [[ $BASELINE_MODE -eq 1 ]] && return 0
+
     if (( $(echo "$ratio >= $CPU_LOAD_CRIT" | bc) )); then
-        alert CRITICAL "SYS-001" "loadavg" "Load per core at $ratio (crit $CPU_LOAD_CRIT) - system saturated"
+        alert CRITICAL "SYS-001" "loadavg" "..."
     elif (( $(echo "$ratio >= $CPU_LOAD_WARN" | bc) )); then
-        alert MEDIUM "SYS-001" "loadavg" "Load per core at $ratio (threshold $CPU_LOAD_WARN)"
+        alert MEDIUM "SYS-001" "loadavg" "..."
     else
         ok "System load normal"
     fi
@@ -40,6 +42,8 @@ check_memory() {
     used_pct=$(( (total - avail) * 100 / total ))
 
     kv "RAM used" "${used_pct}%  ($(( (total - avail) / 1024 )) MB / $(( total / 1024 )) MB)"
+
+    [[ $BASELINE_MODE -eq 1 ]] && return 0
 
     if (( used_pct >= MEM_USED_CRIT )); then
         alert CRITICAL "SYS-002" "memory" "RAM used at ${used_pct}% (threshold $MEM_USED_CRIT%)"
@@ -64,6 +68,9 @@ check_disk() {
     while read -r fs used_pct mount; do
         used_pct="${used_pct%\%}"
         kv "Disk $mount" "${used_pct}% used ($fs)"
+
+        [[ $BASELINE_MODE -eq 1 ]] && return 0
+
         if (( used_pct >= DISK_USED_CRIT )); then
             alert CRITICAL "SYS-004" "$mount" "Partition $mount full at ${used_pct}%"
         elif (( used_pct >= DISK_USED_WARN )); then
@@ -73,6 +80,9 @@ check_disk() {
 
     while read -r used_pct mount; do
         used_pct="${used_pct%\%}"
+
+        [[ $BASELINE_MODE -eq 1 ]] && return 0
+
         [[ "$used_pct" =~ ^[0-9]+$ ]] || continue
         (( used_pct >= DISK_USED_CRIT )) && \
             alert HIGH "SYS-005" "inodes:$mount" "Inodes exhausted at ${used_pct}% on $mount (writes blocked)"
@@ -94,6 +104,9 @@ check_zombies() {
     local count
     count="$(ps -eo stat --no-headers 2>/dev/null | grep -c '^Z')"
     kv "Zombie processes" "$count"
+
+    [[ $BASELINE_MODE -eq 1 ]] && return 0
+
     (( count > 10 )) && alert MEDIUM "SYS-006" "zombies" "$count zombie processes"
     return 0
 }
