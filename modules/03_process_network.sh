@@ -133,7 +133,7 @@ check_listening_ports() {
 # Source: ss -tupn state established (active TCP/UDP connections).
 check_outbound() {
     local proto localaddr peeraddr proc peer_ip found=0
-    while read -r proto _ _ localaddr peeraddr proc; do
+    while read -r proto _ _ _ localaddr peeraddr proc; do
         [[ "$proto" == "Netid" ]] && continue
         [[ -z "$peeraddr" ]] && continue
         peer_ip="${peeraddr%:*}"
@@ -160,7 +160,7 @@ check_outbound() {
 # Source: ss -tupn (owning process) cross-referenced against shell binary names.
 check_reverse_shell() {
     local proto localaddr peeraddr proc pid comm found=0
-    while read -r proto _ _ localaddr peeraddr proc; do
+    while read -r proto _ _ _ localaddr peeraddr proc; do
         [[ "$proto" == "Netid" ]] && continue
         [[ -z "$proc" ]] && continue
 
