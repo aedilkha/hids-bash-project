@@ -35,6 +35,7 @@
 # ==============================================================================
 check_suspicious_paths() {
     local pid exe owner cmdline comm found=0
+    [[ $BASELINE_MODE -eq 1 ]] && return 0 
     for pid in $(ps -eo pid --no-headers 2>/dev/null); do
         exe="$(readlink -f "/proc/$pid/exe" 2>/dev/null)" || continue
         [[ -z "$exe" ]] && continue
@@ -63,6 +64,7 @@ check_suspicious_paths() {
 # Source: /proc/<pid>/exe symlink target via readlink.
 check_deleted_binaries() {
     local pid exe owner cmdline found=0
+    [[ $BASELINE_MODE -eq 1 ]] && return 0 
     for pid in $(ps -eo pid --no-headers 2>/dev/null); do
         exe="$(readlink "/proc/$pid/exe" 2>/dev/null)" || continue
         [[ -z "$exe" ]] && continue
@@ -84,6 +86,7 @@ check_deleted_binaries() {
 # Source: ps -eo pcpu,pmem (percent CPU / percent memory per process).
 check_high_resource() {
     local pid user pcpu pmem cmdline found=0
+    [[ $BASELINE_MODE -eq 1 ]] && return 0 
     while read -r pid user pcpu pmem; do
         [[ "$pid" == "PID" ]] && continue
       cmdline="$(tr '\0' ' ' 2>/dev/null < "/proc/$pid/cmdline")"
@@ -105,6 +108,7 @@ check_high_resource() {
 # Source: ss -tulnp (listening TCP/UDP sockets + owning process).
 check_listening_ports() {
     local proto localaddr port proc found=0
+    [[ $BASELINE_MODE -eq 1 ]] && return 0 
     while read -r proto _ _ _ localaddr _ proc; do
         [[ "$proto" == "Netid" ]] && continue
         [[ -z "$localaddr" ]] && continue
@@ -160,6 +164,7 @@ check_outbound() {
 # Source: ss -tupn (owning process) cross-referenced against shell binary names.
 check_reverse_shell() {
     local proto localaddr peeraddr proc pid comm found=0
+    [[ $BASELINE_MODE -eq 1 ]] && return 0 
     while read -r proto _ _ _ localaddr peeraddr proc; do
         [[ "$proto" == "Netid" ]] && continue
         [[ -z "$proc" ]] && continue
@@ -185,6 +190,7 @@ check_reverse_shell() {
 # Source: /etc/cron* (system-wide) and crontab -l (per-user).
 check_cron_jobs() {
     local line user found=0
+    [[ $BASELINE_MODE -eq 1 ]] && return 0 
 
     # System-wide cron files
     while read -r line; do
