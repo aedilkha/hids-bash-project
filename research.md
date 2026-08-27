@@ -52,7 +52,7 @@ Thresholds chosen and why:
 - Inodes: df -h can say 40% while df -i says 100% when an attacker creates
   millions of tiny files. We watch both.
 
-## 2. Users and activity  (Tom)  [TO COMPLETE]
+## 2. Users and activity  (Tom)  [COMPLETED]
 
 How Linux records who logged in, when, from where:
 - Successful logins -> /var/log/wtmp (last)
