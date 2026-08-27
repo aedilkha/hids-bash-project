@@ -33,21 +33,23 @@
 #   - 127.0.0.1/::1 listeners are not network-exposed: lower severity than 0.0.0.0
 #   - a legit process can run from /tmp (installer): prefer HIGH + context
 # ==============================================================================
-
-# REFERENCE EXAMPLE — keep and complete the rest.
-# check_suspicious_paths: a process run from a world-writable temp dir is the
-# most common post-compromise pattern. Source: /proc/<pid>/exe via readlink.
 check_suspicious_paths() {
-    local pid exe owner cmdline found=0
+    local pid exe owner cmdline comm found=0
     for pid in $(ps -eo pid --no-headers 2>/dev/null); do
         exe="$(readlink -f "/proc/$pid/exe" 2>/dev/null)" || continue
         [[ -z "$exe" ]] && continue
         case "$exe" in
             /tmp/*|/dev/shm/*|/var/tmp/*|/run/shm/*)
                 owner="$(stat -c '%U' "/proc/$pid" 2>/dev/null)"
-                cmdline="$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)"
-                alert HIGH "PRC-001" "$exe" "Process from a temp dir: pid $pid, user $owner, cmd: ${cmdline:0:80}"
-                found=1
+                cmdline="$(tr '\0' ' ' 2>/dev/null < "/proc/$pid/cmdline")"
+                comm="$(ps -o comm= -p "$pid" 2>/dev/null)"
+
+                if [[ " $PROCESS_WHITELIST " =~ " $comm " ]]; then
+                    kv "temp-dir (whitelisted)" "$exe: pid $pid, user $owner, comm $comm"
+                else
+                    alert HIGH "PRC-001" "$exe" "Process from a temp dir: pid $pid, user $owner, cmd: ${cmdline:0:80}"
+                    found=1
+                fi
                 ;;
         esac
     done
