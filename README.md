@@ -1,9 +1,5 @@
 # HIDS — Host Intrusion Detection System
 
-> [TO COMPLETE — owned by Jakub]
-> End-user document, written for someone who did NOT build the tool. This
-> starter fixes the structure; each [TODO] is completed as the modules land.
-
 A Bash-based Host Intrusion Detection System. It monitors a Linux host across
 five areas — system health, user activity, processes & network, file integrity,
 and alerting — using only native Linux tools. No third-party software.
@@ -12,7 +8,6 @@ and alerting — using only native Linux tools. No third-party software.
 
 - Linux (tested on Ubuntu 22.04)
 - Bash 4+
-- bc (for the load-average calculation): sudo apt install bc
 - root recommended (some checks are partial without it)
 
 ## Quick start
@@ -28,6 +23,11 @@ and alerting — using only native Linux tools. No third-party software.
 
     # Output without colors (for a file or an email)
     sudo ./hids.sh --no-color
+
+The repository also includes a safe demonstration that starts a temporary copy
+of `sleep`, detects its executable under `/tmp`, and removes it automatically:
+
+    ./tools/simulate_attack.sh
 
 ## What each module checks
 
@@ -58,17 +58,72 @@ the type of finding regardless of the wording.
 ## Customizing thresholds
 
 All thresholds and whitelists live in hids.conf. You never edit the scripts to
-tune the tool. [TODO: Tom, Jakub concrete examples once the modules are done, e.g.
-raising FAILED_LOGIN_CRIT, adding a port to PORT_WHITELIST.]
+tune the tool.
+
+Examples:
+
+    # Your server gets legitimate brute-force noise from bots on the internet.
+    # Raise the threshold so only real attack volumes trigger an alert.
+    FAILED_LOGIN_CRIT=100
+
+    # You run a Minecraft server on port 25565. Add it so it stops being
+    # flagged as an unexpected listening port.
+    PORT_WHITELIST="22 53 80 443 631 25565"
+
+    # A backup script legitimately runs rsync from a temp directory.
+    # Add its process name so it's not flagged as suspicious.
+    PROCESS_WHITELIST="rsync tar gzip apt dpkg unattended-upgrade my-backup-tool"
+
+    # Your team works evenings; extend the "normal" login window.
+    WORK_HOURS_START=6
+    WORK_HOURS_END=23
 
 ## Automatic execution
 
-[TODO — Alvi, day 6: document the cron entry or systemd timer here.]
+The tool is meant to run on a schedule, not by hand every time. Two options:
+
+### Option A — cron (simplest)
+
+    sudo crontab -e
+
+Add this line to run a full scan every 15 minutes, writing output to a log
+instead of the terminal:
+
+    */15 * * * * /path/to/hids.sh --no-color >> /var/log/hids/cron_run.log 2>&1
+
+### Option B — systemd timer (cleaner logs, easier to inspect with journalctl)
+
+Create `/etc/systemd/system/hids.service`:
+
+    [Unit]
+    Description=HIDS security scan
+
+    [Service]
+    Type=oneshot
+    ExecStart=/path/to/hids.sh --no-color
+
+Create `/etc/systemd/system/hids.timer`:
+
+    [Unit]
+    Description=Run HIDS every 15 minutes
+
+    [Timer]
+    OnBootSec=2min
+    OnUnitActiveSec=15min
+
+    [Install]
+    WantedBy=timers.target
+
+Then enable it:
+
+    sudo systemctl enable --now hids.timer
+    sudo systemctl list-timers hids.timer   # confirm it's scheduled
+    journalctl -u hids.service              # see past runs
 
 ## Project layout
 
     hids.sh          Orchestrator (entry point)
     hids.conf        Thresholds and whitelists
-    lib/common.sh    Core: alerting, dedup, baseline, colors
+    libs/common.sh   Core: alerting, dedup, baseline, colors
     modules/         One file per module
     tools/           Helper scripts (attack simulation for the demo)

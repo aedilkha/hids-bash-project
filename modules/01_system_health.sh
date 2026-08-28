@@ -7,6 +7,7 @@
 #   - one function = one check, with a comment saying what and why
 #   - raw data -> kv(), anomalies -> alert(), no direct log writes
 #   - thresholds come from the config, never hard-coded
+#   - in --baseline mode: show context (kv/ok) but never call alert()
 # Alert codes reserved for this module: SYS-xxx
 # ==============================================================================
 
@@ -17,19 +18,19 @@ check_load_average() {
     local load1 load5 load15 cores ratio
     read -r load1 load5 load15 _ < /proc/loadavg
     cores="$(nproc 2>/dev/null || echo 1)"
-    ratio="$(echo "scale=2; $load1 / $cores" | bc)"
+    ratio="$(awk -v load_value="$load1" -v core_count="$cores" 'BEGIN { printf "%.2f", load_value / core_count }')"
 
     kv "Load (1/5/15 min)" "$load1 / $load5 / $load15  (${cores} cores)"
     kv "Load per core"     "$ratio"
 
-    [[ $BASELINE_MODE -eq 1 ]] && return 0
-
-    if (( $(echo "$ratio >= $CPU_LOAD_CRIT" | bc) )); then
-        alert CRITICAL "SYS-001" "loadavg" "..."
-    elif (( $(echo "$ratio >= $CPU_LOAD_WARN" | bc) )); then
-        alert MEDIUM "SYS-001" "loadavg" "..."
-    else
-        ok "System load normal"
+    if [[ $BASELINE_MODE -eq 0 ]]; then
+        if awk -v value="$ratio" -v threshold="$CPU_LOAD_CRIT" 'BEGIN { exit !(value >= threshold) }'; then
+            alert CRITICAL "SYS-001" "loadavg" "Load per core at $ratio (crit $CPU_LOAD_CRIT) - system saturated"
+        elif awk -v value="$ratio" -v threshold="$CPU_LOAD_WARN" 'BEGIN { exit !(value >= threshold) }'; then
+            alert MEDIUM "SYS-001" "loadavg" "Load per core at $ratio (threshold $CPU_LOAD_WARN)"
+        else
+            ok "System load normal"
+        fi
     fi
 }
 
@@ -43,49 +44,58 @@ check_memory() {
 
     kv "RAM used" "${used_pct}%  ($(( (total - avail) / 1024 )) MB / $(( total / 1024 )) MB)"
 
-    [[ $BASELINE_MODE -eq 1 ]] && return 0
-
-    if (( used_pct >= MEM_USED_CRIT )); then
-        alert CRITICAL "SYS-002" "memory" "RAM used at ${used_pct}% (threshold $MEM_USED_CRIT%)"
-    elif (( used_pct >= MEM_USED_WARN )); then
-        alert MEDIUM "SYS-002" "memory" "RAM used at ${used_pct}% (threshold $MEM_USED_WARN%)"
-    else
-        ok "Enough memory available"
+    if [[ $BASELINE_MODE -eq 0 ]]; then
+        if (( used_pct >= MEM_USED_CRIT )); then
+            alert CRITICAL "SYS-002" "memory" "RAM used at ${used_pct}% (threshold $MEM_USED_CRIT%)"
+        elif (( used_pct >= MEM_USED_WARN )); then
+            alert MEDIUM "SYS-002" "memory" "RAM used at ${used_pct}% (threshold $MEM_USED_WARN%)"
+        else
+            ok "Enough memory available"
+        fi
     fi
 
+    # Swap is checked independently of the block above: we always want to see
+    # the swap figure, even in baseline mode, we just never alert on it there.
     swap_total="$(awk '/^SwapTotal:/ {print $2}' /proc/meminfo)"
     swap_free="$(awk '/^SwapFree:/  {print $2}' /proc/meminfo)"
     if (( swap_total > 0 )); then
         swap_pct=$(( (swap_total - swap_free) * 100 / swap_total ))
         kv "Swap used" "${swap_pct}%"
-        (( swap_pct >= 50 )) && alert MEDIUM "SYS-003" "swap" "Swap used at ${swap_pct}%"
+        if [[ $BASELINE_MODE -eq 0 ]]; then
+            (( swap_pct >= 50 )) && alert MEDIUM "SYS-003" "swap" "Swap used at ${swap_pct}%"
+        fi
     fi
 }
 
 # check_disk: disk space per mount, plus inodes. A full disk stops log writing
 # (blinds detection). Inodes trap: df -h says 40% but df -i says 100%.
+#
+# IMPORTANT: inside a `while read` loop, `return` would exit the WHOLE
+# function on the first line read (it stops the loop AND everything after
+# it). We only ever use `continue` inside these loops, and keep the
+# baseline-mode guard as a plain `if` around the alert() call instead.
 check_disk() {
     while read -r fs used_pct mount; do
         used_pct="${used_pct%\%}"
         kv "Disk $mount" "${used_pct}% used ($fs)"
 
-        [[ $BASELINE_MODE -eq 1 ]] && return 0
-
-        if (( used_pct >= DISK_USED_CRIT )); then
-            alert CRITICAL "SYS-004" "$mount" "Partition $mount full at ${used_pct}%"
-        elif (( used_pct >= DISK_USED_WARN )); then
-            alert MEDIUM "SYS-004" "$mount" "Partition $mount at ${used_pct}%"
+        if [[ $BASELINE_MODE -eq 0 ]]; then
+            if (( used_pct >= DISK_USED_CRIT )); then
+                alert CRITICAL "SYS-004" "$mount" "Partition $mount full at ${used_pct}%"
+            elif (( used_pct >= DISK_USED_WARN )); then
+                alert MEDIUM "SYS-004" "$mount" "Partition $mount at ${used_pct}%"
+            fi
         fi
     done < <(df -hP -x tmpfs -x devtmpfs -x squashfs 2>/dev/null | awk 'NR>1 {print $1, $5, $6}')
 
     while read -r used_pct mount; do
         used_pct="${used_pct%\%}"
-
-        [[ $BASELINE_MODE -eq 1 ]] && return 0
-
         [[ "$used_pct" =~ ^[0-9]+$ ]] || continue
-        (( used_pct >= DISK_USED_CRIT )) && \
-            alert HIGH "SYS-005" "inodes:$mount" "Inodes exhausted at ${used_pct}% on $mount (writes blocked)"
+
+        if [[ $BASELINE_MODE -eq 0 ]]; then
+            (( used_pct >= DISK_USED_CRIT )) && \
+                alert HIGH "SYS-005" "inodes:$mount" "Inodes exhausted at ${used_pct}% on $mount (writes blocked)"
+        fi
     done < <(df -iP -x tmpfs -x devtmpfs -x squashfs 2>/dev/null | awk 'NR>1 {print $5, $6}')
 }
 
@@ -105,9 +115,9 @@ check_zombies() {
     count="$(ps -eo stat --no-headers 2>/dev/null | grep -c '^Z')"
     kv "Zombie processes" "$count"
 
-    [[ $BASELINE_MODE -eq 1 ]] && return 0
-
-    (( count > 10 )) && alert MEDIUM "SYS-006" "zombies" "$count zombie processes"
+    if [[ $BASELINE_MODE -eq 0 ]]; then
+        (( count > 10 )) && alert MEDIUM "SYS-006" "zombies" "$count zombie processes"
+    fi
     return 0
 }
 

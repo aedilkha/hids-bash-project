@@ -67,7 +67,7 @@ done
 export NO_COLOR QUIET BASELINE_MODE
 
 # --- Load the core ---
-source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/libs/common.sh"
 load_config "$CONFIG_FILE"
 setup_colors
 

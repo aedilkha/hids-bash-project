@@ -134,14 +134,8 @@ check_file_hashes() {
 # Source: stat -c '%a' (octal perms).
 check_permissions() {
     local file expected actual expected_mode actual_mode found=0
-    local -a rules=(
-        "/etc/shadow:640"
-        "/etc/gshadow:640"
-        "/etc/passwd:644"
-        "/etc/group:644"
-        "/etc/sudoers:440"
-        "/etc/ssh/sshd_config:600"
-    )
+    local -a rules=()
+    read -r -a rules <<< "${SENSITIVE_FILE_MODES:-}"
     for rule in "${rules[@]}"; do
         file="${rule%%:*}"
         expected="${rule##*:}"

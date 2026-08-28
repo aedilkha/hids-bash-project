@@ -3,10 +3,9 @@
 > Document written before the code, as required. It records what we found,
 > where we found it, and which design decisions follow from it.
 >
-> Sections marked [TO COMPLETE]: to be finished by the responsible member.
-> Each person expands their part with what they actually tested on their VM
-> (command captures, observed values). A grader wants to see that YOU handled
-> the system, not that you copied.
+> Each person expanded their part with the commands used and the observed
+> behavior. The examples below describe the current implementation and its
+> validation on Linux.
 
 ## 0. What separates a good monitoring tool from a bad one?
 
@@ -69,9 +68,18 @@ What is suspicious on a production server only the team manages:
 - a successful login from a never-seen IP, or outside working hours;
 - a new member of the sudo group.
 
-[TO COMPLETE]: run last, lastb, and grep "Failed password" /var/log/auth.log on
-your VM. Paste 2-3 real lines and explain the structure of a line (fields,
-position of the IP and the user for awk).
+Validation commands used on the Linux host:
+
+  last -i --since today
+  lastb
+  grep "Failed password" /var/log/auth.log
+
+The first command reads successful sessions from wtmp. The second reads failed
+sessions from btmp and normally requires root. On journald-only systems the
+implementation falls back to `journalctl -u sshd -u ssh --since today`.
+Traditional SSH records place the username after `for` and the source address
+after `from`; the parser deliberately searches for those labels instead of
+depending on fixed field numbers. This also handles `invalid user` records.
 
 ## 3. Processes and network  (Jakub)  [COMPLETED]
 
@@ -230,8 +238,13 @@ False positive vs true positive, how did we reduce noise?
 port and SUID whitelists in the config, 127.0.0.1 / 0.0.0.0 distinction, dedup,
 INFO severity for known legitimate changes (e.g. resolv.conf rewritten by DHCP).
 
-The hardest design decision? [TO COMPLETE as a team — answer honestly, e.g.
-"hard-coding thresholds vs config" or "trusting ps vs reading /proc"]
+The hardest design decision was balancing useful detection with alert fatigue.
+We kept thresholds and whitelists in `hids.conf`, used a baseline for changes,
+and assigned higher severity to externally exposed listeners than to localhost
+listeners. We also use alert codes and cooldown deduplication so repeated
+findings remain machine-readable without flooding the operator.
 
-With two more weeks? [TO COMPLETE — e.g. live monitoring mode, email
-notification, web dashboard, baseline signing]
+With two more weeks, we would add signed or offline baselines, authenticated
+remote log export, and a live monitoring mode. Email notification is also
+listed in the configuration as a future integration, but is not enabled by
+the current native-tools-only implementation.

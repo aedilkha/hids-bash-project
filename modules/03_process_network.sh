@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# Module 3 — Process and Network Audit                           [TO COMPLETE]
+# Module 3 — Process and Network Audit                           [COMPLETED]
 # Answers: "is anything running or listening that should not be?"
 #
 # CONTRACT (do not modify):
@@ -18,14 +18,14 @@
 #   systemctl list-units --type=service   ;   /etc/cron*, crontab -l
 #
 # CHECKLIST — each ticked box = one commented function
-#   [ ] check_suspicious_paths   process from /tmp,/dev/shm,/var/tmp = HIGH (DONE)
-#   [ ] check_deleted_binaries   /proc/<pid>/exe -> "(deleted)"
-#   [ ] check_high_resource      abnormal CPU/RAM (mining)
-#   [ ] check_listening_ports    listening ports vs PORT_WHITELIST
-#   [ ] check_outbound           established connections to public IPs
-#   [ ] check_reverse_shell      bash/sh/nc/python with a network socket
-#   [ ] check_cron_jobs          cron with wget/curl/base64/| bash
-#   [ ] check_new_services       systemd services absent from the baseline
+#   [x] check_suspicious_paths   process from /tmp,/dev/shm,/var/tmp = HIGH
+#   [x] check_deleted_binaries   /proc/<pid>/exe -> "(deleted)"
+#   [x] check_high_resource      abnormal CPU/RAM (mining)
+#   [x] check_listening_ports    listening ports vs PORT_WHITELIST
+#   [x] check_outbound           established connections to public IPs
+#   [x] check_reverse_shell      bash/sh/nc/python with a network socket
+#   [x] check_cron_jobs          cron with wget/curl/base64/| bash
+#   [x] check_new_services       systemd services absent from the baseline
 #
 # PITFALLS:
 #   - ss -p needs root to see other users' owning process (say so if empty)
@@ -90,10 +90,10 @@ check_high_resource() {
     while read -r pid user pcpu pmem; do
         [[ "$pid" == "PID" ]] && continue
       cmdline="$(tr '\0' ' ' 2>/dev/null < "/proc/$pid/cmdline")"
-        if (( $(echo "$pcpu >= $CPU_PROCESS_ALERT" | bc -l 2>/dev/null) )); then
+        if awk -v value="$pcpu" -v threshold="$CPU_PROCESS_ALERT" 'BEGIN { exit !(value >= threshold) }'; then
             alert HIGH "PRC-003" "$pid" "High CPU usage: pid $pid, user $user, cpu ${pcpu}%, cmd: ${cmdline:0:80}"
             found=1
-        elif (( $(echo "$pmem >= $MEM_PROCESS_ALERT" | bc -l 2>/dev/null) )); then
+        elif awk -v value="$pmem" -v threshold="$MEM_PROCESS_ALERT" 'BEGIN { exit !(value >= threshold) }'; then
             alert HIGH "PRC-003" "$pid" "High memory usage: pid $pid, user $user, mem ${pmem}%, cmd: ${cmdline:0:80}"
             found=1
         fi

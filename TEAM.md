@@ -8,7 +8,7 @@ plus à assembler le jour de la démo.
 
 Un module = une personne = un fichier = une fonction publique.
 
-Personne ne touche au fichier d'un autre. Personne ne modifie lib/common.sh
+Personne ne touche au fichier d'un autre. Personne ne modifie libs/common.sh
 sauf le responsable du socle (Alvi). Si tu as besoin d'un truc dans le socle,
 tu le demandes, tu ne l'ajoutes pas toi-même — sinon deux personnes réécrivent
 la même fonction et git n'arrive plus à merger.
@@ -31,7 +31,7 @@ sans qu'on ait rien à recoller.
 ## Répartition
 
 ### Alvi — Socle + Module 1 + intégration
-- lib/common.sh (fait) — tu es le SEUL à le modifier
+- libs/common.sh (fait) — tu es le SEUL à le modifier
 - hids.sh (fait) — orchestrateur
 - modules/01_system_health.sh (fait, sert de modèle aux autres)
 - hids.conf (fait) — tu arbitres les ajouts de seuils
