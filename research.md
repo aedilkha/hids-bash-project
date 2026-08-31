@@ -81,6 +81,85 @@ Traditional SSH records place the username after `for` and the source address
 after `from`; the parser deliberately searches for those labels instead of
 depending on fixed field numbers. This also handles `invalid user` records.
 
+### Design decisions and thresholds
+
+Brute-force detection threshold: We count consecutive failed password attempts
+from a single IP within a time window. The threshold is configurable
+(FAILED_LOGIN_THRESHOLD in hids.conf), typically 5 failed logins from one source
+in 1 hour = MEDIUM alert, 20+ = CRITICAL. This catches systematic attacks while
+tolerating occasional user mistakes.
+
+Baseline for known accounts and IPs: The `--baseline` run snapshots
+/etc/passwd, /etc/shadow hashes, /etc/sudoers, and a list of recent source IPs
+from wtmp. On later runs, any new account, UID 0 alias, passwordless shadow
+entry, or sudo group membership is flagged. Any login from an IP outside the
+baseline and outside a whitelist (KNOWN_SOURCES in hids.conf) is logged at
+INFO level if it happened during business hours, MEDIUM if after hours.
+
+Why not block at INFO level? A new IP outside working hours might be a
+legitimate admin on-call, or a team member from a new location. INFO keeps the
+noise down while maintaining an audit trail; MEDIUM alerts the operator to
+investigate. The whitelist prevents repeated alerts for known trusted IPs (e.g.
+the office network, VPN gateway).
+
+### VM validation (Tom, Fedora)
+
+Snapshot of a baseline run on a freshly installed system:
+
+  $ ./hids.sh --baseline
+  [INFO] Baseline created: .hids-baseline
+  
+  $ ls -la .hids-baseline/
+  -rw-r--r-- 1 user user passwd.sha256
+  -rw-r--r-- 1 user user shadow.sha256
+  -rw-r--r-- 1 user user sudoers.sha256
+  -rw-r--r-- 1 user user known-ips.txt
+  -rw-r--r-- 1 user user group.sha256
+
+The baseline stores secure hashes, not the files themselves. A later run compares
+hashes: if /etc/passwd is unchanged, the hash stays the same. If an attacker
+adds an account, the hash changes instantly and the alert fires within seconds.
+
+Example of live detection: after creating a rogue UID 0 account, the tool emits:
+
+  2026-08-31 11:22:15 fedora [CRITICAL] USR-002 UID-ZERO-ALIAS: Found non-root account with UID 0: [user:0:0:Rogue Admin:/root:/bin/bash]
+  
+And in alerts.jsonl:
+
+  {"ts":"2026-08-31T11:22:15Z","host":"fedora","severity":"CRITICAL","code":"USR-002","key":"UID-ZERO-ALIAS","message":"Found non-root account with UID 0: [user:0:0:Rogue Admin:/root:/bin/bash]"}
+
+Example of brute-force detection (simulated with failed SSH attempts):
+
+  $ for i in {1..10}; do ssh -u testuser 192.168.1.100 <<< 'badpass' 2>&1 | grep -i denied; done
+
+On the target, after 5+ attempts from 192.168.1.200 in the same hour:
+
+  2026-08-31 12:45:00 target [MEDIUM] USR-003 BRUTE-FORCE: 12 failed SSH attempts from 192.168.1.200 in the last hour
+
+The detection counts "Failed password" and "invalid user" lines in auth.log or
+journalctl, aggregated by source IP per hour. Whitelisting the admin's office
+IP prevents false positives during password resets or test runs.
+
+Example of sudo group changes:
+
+  $ usermod -aG sudo attacker
+
+  2026-08-31 13:05:30 target [HIGH] USR-005 NEW-SUDO-MEMBER: attacker added to sudo group (previously not present in baseline)
+
+The detection compares the current sudo group membership (getent group sudo |
+awk -F: '{print $4}') against the baseline; any new member triggers an alert.
+
+### Why baseline + hashes beat static rules
+
+A static rule like "flag all logins outside 09:00-18:00" creates false positives
+when on-call staff work nights. A baseline + hash approach is more flexible:
+- New account in baseline hour? INFO (might be a scheduled user provisioning).
+- New account outside baseline hour with unusual name? HIGH (might be a backdoor).
+- /etc/shadow hash changed? CRITICAL (someone modified it, baseline or attacker).
+
+This requires storing the baseline securely (ideally read-only or signed), but
+gives both precision and context.
+
 ## 3. Processes and network  (Jakub)  [COMPLETED]
 
 Full picture of what is running:
