@@ -1,0 +1,149 @@
+=================================================================
+  HIDS Project — File Manifest
+  Complete guide to what each file does
+=================================================================
+
+DEMO & PRESENTATION
+────────────────────────────────────────────────────────────────
+  demo.sh                    Main orchestrator for full demo (run this first!)
+  QUICK_DEMO.sh              5-minute quick demo wrapper
+  DEMO.md                    Complete demo walkthrough + answers to 6 Q&A
+  DEMO_CHEATSHEET.md         Quick reference for live presentation
+  READYFOR_PRESENTATION.md   Pre-demo checklist + troubleshooting
+  IMPLEMENTATION.md          What was built and how to use it
+
+MAIN HIDS TOOL
+────────────────────────────────────────────────────────────────
+  hids.sh                    Entry point orchestrator
+  hids.conf                  Configuration file (production)
+  hids.demo.conf             Configuration file (optimized for demo)
+
+CORE LIBRARIES
+────────────────────────────────────────────────────────────────
+  libs/
+    └─ common.sh             Shared functions: alerting, baseline, colors, logging
+
+DETECTION MODULES
+────────────────────────────────────────────────────────────────
+  modules/
+    ├─ 01_system_health.sh   Module 1: CPU load, memory, disk, swap, zombies
+    ├─ 02_user_activity.sh   Module 2: User accounts, logins, privilege escalation
+    ├─ 03_process_network.sh Module 3: Malicious processes, unexpected ports
+    └─ 04_file_integrity.sh  Module 4: File hashes, permissions, SUID binaries
+
+DEMONSTRATION SCRIPTS
+────────────────────────────────────────────────────────────────
+  tools/
+    ├─ simulate_attack.sh           Scenario A: Process from /tmp → PRC-001
+    ├─ demo_file_tampering.sh       Scenario B: File permission change → FIM-001
+    └─ demo_suspicious_user.sh      Scenario C: Backdoor account → USR-002
+
+DEPLOYMENT
+────────────────────────────────────────────────────────────────
+  install.sh                 Automated setup: directories, baseline, cron/systemd
+
+DOCUMENTATION
+────────────────────────────────────────────────────────────────
+  README.md                  Quick start guide for end users
+  research.md                Technical research (what we learned first)
+  TEAM.md                    Team roles and responsibilities
+  FILE_MANIFEST.txt          This file
+
+RUNTIME DIRECTORIES
+────────────────────────────────────────────────────────────────
+  logs/                      Alert output
+    ├─ alerts.log            Human-readable alerts (text)
+    └─ alerts.jsonl          Machine-readable alerts (JSON, one per line)
+
+  state/                     Reference state and configuration
+    ├─ alert_state           Cooldown tracking for dedup
+    └─ baseline/             Reference snapshot (first run)
+        ├─ file_hashes       SHA256 of critical files
+        ├─ suid_binaries     Baseline SUID binaries
+        ├─ services          Baseline services
+        ├─ user_accounts     Baseline user accounts
+        ├─ user_login_ips    Baseline user login locations
+        ├─ user_privileged_members  Baseline privilege users
+        └─ boot_time         System boot timestamp
+
+=================================================================
+  QUICK COMMAND REFERENCE
+=================================================================
+
+Run the demo:
+  sudo ./demo.sh
+
+Run individual modules:
+  sudo ./hids.sh --module 1        (System health)
+  sudo ./hids.sh --module 2        (User activity)
+  sudo ./hids.sh --module 3        (Process & network)
+  sudo ./hids.sh --module 4        (File integrity)
+
+Create/reset baseline:
+  sudo ./hids.sh --baseline
+
+Run with demo config (less noisy):
+  sudo ./hids.sh --config hids.demo.conf
+
+View alerts:
+  cat /var/log/hids/alerts.log     (human format)
+  jq . /var/log/hids/alerts.jsonl  (machine format)
+
+Install for automatic execution:
+  sudo ./install.sh
+
+=================================================================
+  KEY DECISION POINTS
+=================================================================
+
+1. Module 1 uses ABSOLUTE thresholds (CPU load > 2.0 is bad)
+   because system health is naturally dynamic.
+
+2. Module 4 uses BASELINE comparison (file hashes)
+   because file integrity should never unexpectedly change.
+
+3. All thresholds go in hids.conf, never hardcoded in modules.
+
+4. Whitelists (PORT_WHITELIST, PROCESS_WHITELIST) reduce noise.
+
+5. ALERT_COOLDOWN prevents alert spam (default 1 hour).
+
+6. Structured JSON output allows parsing by SIEM tools.
+
+=================================================================
+  ALERT CODES
+=================================================================
+
+Module 1 (System Health):
+  SYS-001  High CPU load per core
+  SYS-002  High memory usage
+  SYS-003  High swap usage
+  SYS-004  High disk usage
+
+Module 2 (User Activity):
+  USR-001  Failed login spike
+  USR-002  Suspicious account (low UID, interactive)
+
+Module 3 (Process & Network):
+  PRC-001  Process from /tmp, /dev/shm, /var/tmp
+  PRC-002  Process running from deleted binary
+  PRC-003  Process exceeds CPU/memory threshold
+  NET-001  Unexpected listening port
+  NET-002  Suspicious shell with outbound connection
+
+Module 4 (File Integrity):
+  FIM-001  File permission violation
+  FIM-002  New SUID binary detected
+  FIM-003  Critical file content changed (hash mismatch)
+
+=================================================================
+  GETTING HELP
+=================================================================
+
+For usage:         head -50 README.md
+For demo steps:    head -50 DEMO.md
+For Q&A answers:   grep "^### [0-9]" DEMO.md
+For checklist:     cat READYFOR_PRESENTATION.md
+For troubleshooting: grep -A5 "Troubleshooting" README.md
+
+=================================================================

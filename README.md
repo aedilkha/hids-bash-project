@@ -120,6 +120,51 @@ Then enable it:
     sudo systemctl list-timers hids.timer   # confirm it's scheduled
     journalctl -u hids.service              # see past runs
 
+## Live demo: triggering detections
+
+To see the HIDS in action, use the automated demo:
+
+    sudo ./demo.sh
+
+This orchestrates three threat scenarios sequentially:
+- **PRC-001**: Detects a process executable copied into /tmp
+- **FIM-001**: Detects a permission change on a watched file
+- **USR-002**: Detects a suspicious user account creation (optional)
+
+Each scenario runs, the HIDS scans, you see the alert, and cleanup happens
+automatically. Perfect for showing how detection works in real time.
+
+### Running individual scenarios
+
+If you want to test one threat at a time:
+
+    # Scenario A: malicious process
+    sudo ./tools/simulate_attack.sh
+
+    # Scenario B: file tampering
+    sudo ./tools/demo_file_tampering.sh
+
+    # Scenario C: suspicious user
+    sudo ./tools/demo_suspicious_user.sh
+
+Then run the corresponding module scan:
+
+    sudo ./hids.sh --module 3    # See PRC alerts
+    sudo ./hids.sh --module 4    # See FIM alerts
+    sudo ./hids.sh --module 2    # See USR alerts
+
+## Troubleshooting the demo
+
+**"No alerts detected"**
+- Ensure you've run `sudo ./hids.sh --baseline` first to establish the reference state.
+- Some alerts may be cached by ALERT_COOLDOWN. Wait or change that value in hids.conf.
+
+**"Permission denied" on file tampering**
+- demo_file_tampering.sh modifies system files and must run as root.
+
+**"User already exists"**
+- Remove any leftover demo user: `sudo userdel -r hids_demo_user`
+
 ## Project layout
 
     hids.sh          Orchestrator (entry point)
@@ -127,3 +172,4 @@ Then enable it:
     libs/common.sh   Core: alerting, dedup, baseline, colors
     modules/         One file per module
     tools/           Helper scripts (attack simulation for the demo)
+    demo.sh          Master demo orchestrator (run this for a full demo)
