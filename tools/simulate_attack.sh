@@ -4,6 +4,11 @@
 
 set -u
 
+PREPARE_ONLY=0
+if [[ "${1:-}" == "--prepare-only" ]]; then
+    PREPARE_ONLY=1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEMO_BINARY="/tmp/hids-demo-process"
 DEMO_PID=""
@@ -29,9 +34,15 @@ chmod 700 "$DEMO_BINARY"
 DEMO_PID=$!
 
 printf 'Simulated attack: temporary executable started with PID %s\n' "$DEMO_PID"
-printf 'Running Module 3; expected detection: PRC-001\n\n'
+printf 'Expected detection: PRC-001 (process running from a temporary directory)\n'
 
-bash "$SCRIPT_DIR/hids.sh" --no-color --module 3
+if (( PREPARE_ONLY )); then
+    printf 'Process is ready. Run Module 3 while this script remains active.\n'
+    wait "$DEMO_PID"
+    exit 0
+fi
+
+bash "$SCRIPT_DIR/hids.sh" --module 3
 scan_exit=$?
 
 if grep -q 'PRC-001' "$SCRIPT_DIR"/logs/alerts.jsonl 2>/dev/null || \

@@ -32,13 +32,13 @@
    - Production and demo configuration files
 
 ✅ Comprehensive Documentation
-   - START_HERE.md          → Quick entry point
+   - docs/START_HERE.md          → Quick entry point
    - README.md              → End-user guide
-   - DEMO.md                → Full demo + 6 Q&A answers
-   - DEMO_CHEATSHEET.md     → Presentation quick reference
-   - READYFOR_PRESENTATION.md → Pre-demo checklist
-   - IMPLEMENTATION.md      → Technical summary
-   - FILE_MANIFEST.txt      → File guide
+   - docs/DEMO.md                → Full demo + 6 Q&A answers
+   - docs/DEMO_CHEATSHEET.md     → Presentation quick reference
+   - docs/READYFOR_PRESENTATION.md → Pre-demo checklist
+   - docs/IMPLEMENTATION.md      → Technical summary
+   - docs/FILE_MANIFEST.txt      → File guide
 
 
 🚀 TO RUN THE DEMO
@@ -46,7 +46,7 @@
 
 One-line demo (everything automated):
   $ cd ~/hids
-  $ sudo ./demo.sh
+  $ sudo ./demos/demo.sh
 
 Expected output: 3 threat scenarios detected, alerts logged, cleanup automatic.
 Time: ~3 minutes total.
@@ -57,19 +57,19 @@ Time: ~3 minutes total.
 
 For Demo:
   demo.sh                    Run this first to see everything
-  READYFOR_PRESENTATION.md   Pre-demo checklist (print this!)
-  DEMO_CHEATSHEET.md         Keep this on 2nd monitor during presentation
+  docs/READYFOR_PRESENTATION.md   Pre-demo checklist (print this!)
+  docs/DEMO_CHEATSHEET.md         Keep this on 2nd monitor during presentation
 
 For Answers:
-  DEMO.md                    Complete answers to all 6 review questions
-  FILE_MANIFEST.txt          What each file does
+  docs/DEMO.md                    Complete answers to all 6 review questions
+  docs/FILE_MANIFEST.txt          What each file does
 
 For Users:
   README.md                  How to use the tool
-  START_HERE.md              Quick entry point
+  docs/START_HERE.md              Quick entry point
 
 For Developers:
-  IMPLEMENTATION.md          What was built and design decisions
+  docs/IMPLEMENTATION.md          What was built and design decisions
   research.md                Pre-coding research
 
 
@@ -89,7 +89,7 @@ Scenario C: Backdoor User Detection
   DETECTED: [MEDIUM] USR-002 Suspicious account (low UID)
 
 Full Demo:
-  $ sudo ./demo.sh
+  $ sudo ./demos/demo.sh
   Runs all 3 scenarios automatically with explanations
 
 
@@ -117,21 +117,21 @@ Alerts:
 ═══════════════════════════════════════════════════════════════════════════
 
 Before presentation:
-  □ Read START_HERE.md (2 minutes)
-  □ Run sudo ./demo.sh once to verify (3 minutes)
-  □ Print DEMO_CHEATSHEET.md (keep on desk during demo)
-  □ Have READYFOR_PRESENTATION.md open for reference
+  □ Read docs/START_HERE.md (2 minutes)
+  □ Run sudo ./demos/demo.sh once to verify (3 minutes)
+  □ Print docs/DEMO_CHEATSHEET.md (keep on desk during demo)
+  □ Have docs/READYFOR_PRESENTATION.md open for reference
 
 During presentation:
   □ Show project structure (tree -L 2)
-  □ Run: sudo ./demo.sh
-  □ Answer 6 review questions (see DEMO.md)
+  □ Run: sudo ./demos/demo.sh
+  □ Answer 6 review questions (see docs/DEMO.md)
   □ Show alert logs: cat /var/log/hids/alerts.log
   □ Explain design decisions
 
 If demo fails:
   □ Fallback logs are in: cat /var/log/hids/alerts.log
-  □ Troubleshooting: see READYFOR_PRESENTATION.md
+  □ Troubleshooting: see docs/READYFOR_PRESENTATION.md
 
 
 🔧 PRODUCTION DEPLOYMENT
@@ -154,7 +154,7 @@ Deploy to multiple machines:
 📚 ANSWERING THE 6 KEY QUESTIONS
 ═══════════════════════════════════════════════════════════════════════════
 
-All detailed answers are in DEMO.md:
+All detailed answers are in docs/DEMO.md:
 
 Q1: Where does each piece of data come from?
 A1: /proc/, /var/log/, filesystem — all native Linux sources
@@ -209,15 +209,15 @@ Long term (1+ week):
 ═══════════════════════════════════════════════════════════════════════════
 
 Quick help:
-  cat START_HERE.md           → Where to start
-  cat FILE_MANIFEST.txt       → What each file does
-  grep "^###" DEMO.md         → All 6 questions
+  cat docs/START_HERE.md           → Where to start
+  cat docs/FILE_MANIFEST.txt       → What each file does
+  grep "^###" docs/DEMO.md         → All 6 questions
 
 Troubleshooting:
-  grep "Issue" READYFOR_PRESENTATION.md
+  grep "Issue" docs/READYFOR_PRESENTATION.md
 
 Detailed answers:
-  cat DEMO.md                 → Full explanations
+  cat docs/DEMO.md                 → Full explanations
 
 
 ═══════════════════════════════════════════════════════════════════════════
@@ -226,6 +226,6 @@ Detailed answers:
 
              Run this to see the demo in action:
                     
-                 $ cd ~/hids && sudo ./demo.sh
+                 $ cd ~/hids && sudo ./demos/demo.sh
 
 ═══════════════════════════════════════════════════════════════════════════

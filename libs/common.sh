@@ -32,6 +32,8 @@ load_config() {
 
     ALERT_LOG="$LOG_DIR/alerts.log"        # human-readable
     ALERT_JSON="$LOG_DIR/alerts.jsonl"     # one JSON alert per line, parsable
+    ALERT_HASH_CHAIN="$LOG_DIR/alerts.sha256"
+    touch "$ALERT_LOG" "$ALERT_JSON" "$ALERT_HASH_CHAIN" 2>/dev/null || true
     BASELINE_DIR="$STATE_DIR/baseline"
     mkdir -p "$BASELINE_DIR"
 
@@ -51,11 +53,13 @@ load_config() {
     HOSTNAME_FQDN="$(hostname -f 2>/dev/null || hostname)"
     ALERT_STATE_FILE="$STATE_DIR/alert_state"
     touch "$ALERT_STATE_FILE" 2>/dev/null || true
+    touch "$ALERT_HASH_CHAIN" 2>/dev/null || true
+    chmod 600 "$ALERT_LOG" "$ALERT_JSON" "$ALERT_HASH_CHAIN" "$ALERT_STATE_FILE" 2>/dev/null || true
 }
 
 # setup_colors: colors only if stdout is a terminal and --no-color wasn't passed.
 setup_colors() {
-    if [[ -t 1 && "${NO_COLOR:-0}" -eq 0 ]]; then
+    if [[ "${NO_COLOR:-0}" -eq 0 && ( -t 1 || "${FORCE_COLOR:-0}" -eq 1 ) ]]; then
         C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_DIM=$'\033[2m'
         C_RED=$'\033[31m'; C_YELLOW=$'\033[33m'; C_GREEN=$'\033[32m'
         C_BLUE=$'\033[34m'; C_MAGENTA=$'\033[35m'
@@ -130,7 +134,15 @@ alert() {
         "$ts_iso" "$(json_escape "$HOSTNAME_FQDN")" "$severity" "$code" \
         "$(json_escape "$key")" "$(json_escape "$message")" >> "$ALERT_JSON"
 
-    # 4. Counters for the summary
+    # 4. Append a tamper-evident SHA-256 chain for every alert record.
+    local previous_hash payload encoded_payload record_hash
+    previous_hash="$(tail -1 "$ALERT_HASH_CHAIN" 2>/dev/null | awk '{print $1}')"
+    payload="${previous_hash}|${ts_iso}|${HOSTNAME_FQDN}|${severity}|${code}|${key}|${message}"
+    record_hash="$(printf '%s' "$payload" | sha256sum | awk '{print $1}')"
+    encoded_payload="$(printf '%s' "$payload" | base64 -w0)"
+    printf '%s\t%s\n' "$record_hash" "$encoded_payload" >> "$ALERT_HASH_CHAIN"
+
+    # 5. Counters for the summary
     case "$severity" in
         CRITICAL) ((ALERT_COUNT_CRITICAL++)) ;;
         HIGH)     ((ALERT_COUNT_HIGH++))     ;;

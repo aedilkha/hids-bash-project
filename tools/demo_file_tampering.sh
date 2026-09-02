@@ -22,11 +22,10 @@ if [[ ! -f /etc/passwd ]]; then
     exit 1
 fi
 
-# For demo: we'll add an entry to a watched file and change permissions
-# This demonstrates both content change and permission detection
+# For demo: change permissions on a watched file to demonstrate detection.
 
 printf 'Simulated attack: file tampering detected\n'
-printf 'Expected detection: FIM-001 (file content change) + FIM-002 (permissions)\n\n'
+printf 'Expected detection: FIM-001 (permissions too broad)\n\n'
 
 # Make /etc/ssh/sshd_config world-readable (bad)
 # First, check if we can do this

@@ -15,9 +15,9 @@ Check this list before your demo to ensure everything works.
 - [ ] **Documentation Complete**:
   - [ ] README.md — How to use the tool
   - [ ] research.md — Why we built it this way
-  - [ ] DEMO.md — Detailed walkthrough + answers
+  - [ ] docs/DEMO.md — Detailed walkthrough + answers
   - [ ] hids.conf — All options documented
-  - [ ] IMPLEMENTATION.md — What was built
+  - [ ] docs/IMPLEMENTATION.md — What was built
 
 - [ ] **Test Each Scenario**:
   ```bash
@@ -31,7 +31,7 @@ Check this list before your demo to ensure everything works.
 
 - [ ] **Demo Script Works**:
   ```bash
-  sudo ./demo.sh
+  sudo ./demos/demo.sh
   # Should complete without errors
   ```
 
@@ -98,7 +98,7 @@ cat alerts_backup.log
 
 ### Timeline: 0:30-1:30 — Run Automated Demo
 ```bash
-sudo ./demo.sh
+sudo ./demos/demo.sh
 ```
 - [ ] Baseline capture
 - [ ] Clean scan verification
@@ -120,7 +120,7 @@ jq '.severity' /var/log/hids/alerts.jsonl | sort | uniq -c
 ```
 
 ### Timeline: 2:00-5:00 — Answer Review Questions
-Use DEMO.md for detailed answers to:
+Use docs/DEMO.md for detailed answers to:
 
 1. **"Where exactly does the data come from?"**
    ```bash
@@ -160,7 +160,7 @@ Use DEMO.md for detailed answers to:
 ## What to Have Ready at Your Desk
 
 ### Physical/Digital Aids
-- [ ] DEMO_CHEATSHEET.md (printed or on 2nd monitor)
+- [ ] docs/DEMO_CHEATSHEET.md (printed or on 2nd monitor)
 - [ ] This checklist
 - [ ] alerts_backup.log (in case live demo fails)
 - [ ] Slides/notes with the 6 Q&A answers

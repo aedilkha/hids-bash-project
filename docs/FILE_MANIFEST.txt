@@ -7,10 +7,10 @@ DEMO & PRESENTATION
 ────────────────────────────────────────────────────────────────
   demo.sh                    Main orchestrator for full demo (run this first!)
   QUICK_DEMO.sh              5-minute quick demo wrapper
-  DEMO.md                    Complete demo walkthrough + answers to 6 Q&A
-  DEMO_CHEATSHEET.md         Quick reference for live presentation
-  READYFOR_PRESENTATION.md   Pre-demo checklist + troubleshooting
-  IMPLEMENTATION.md          What was built and how to use it
+  docs/DEMO.md                    Complete demo walkthrough + answers to 6 Q&A
+  docs/DEMO_CHEATSHEET.md         Quick reference for live presentation
+  docs/READYFOR_PRESENTATION.md   Pre-demo checklist + troubleshooting
+  docs/IMPLEMENTATION.md          What was built and how to use it
 
 MAIN HIDS TOOL
 ────────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ DOCUMENTATION
   README.md                  Quick start guide for end users
   research.md                Technical research (what we learned first)
   TEAM.md                    Team roles and responsibilities
-  FILE_MANIFEST.txt          This file
+  docs/FILE_MANIFEST.txt          This file
 
 RUNTIME DIRECTORIES
 ────────────────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ RUNTIME DIRECTORIES
 =================================================================
 
 Run the demo:
-  sudo ./demo.sh
+  sudo ./demos/demo.sh
 
 Run individual modules:
   sudo ./hids.sh --module 1        (System health)
@@ -141,9 +141,9 @@ Module 4 (File Integrity):
 =================================================================
 
 For usage:         head -50 README.md
-For demo steps:    head -50 DEMO.md
-For Q&A answers:   grep "^### [0-9]" DEMO.md
-For checklist:     cat READYFOR_PRESENTATION.md
+For demo steps:    head -50 docs/DEMO.md
+For Q&A answers:   grep "^### [0-9]" docs/DEMO.md
+For checklist:     cat docs/READYFOR_PRESENTATION.md
 For troubleshooting: grep -A5 "Troubleshooting" README.md
 
 =================================================================

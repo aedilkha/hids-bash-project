@@ -100,6 +100,7 @@ print_summary() {
     kv "Info"            "$ALERT_COUNT_INFO"
     kv "Text log"        "$ALERT_LOG"
     kv "JSON log"        "$ALERT_JSON"
+    kv "Alert hash chain" "$ALERT_HASH_CHAIN"
 
     if (( total == 0 )); then
         printf '\n  %sNo anomaly detected on this run.%s\n\n' "$C_GREEN" "$C_RESET"

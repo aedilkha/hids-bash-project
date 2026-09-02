@@ -10,7 +10,7 @@ For use during live demonstration. Print or keep on second monitor.
 cd ~/hids
 sudo ./hids.sh --baseline          # Capture clean state (~1 min)
 sudo ./hids.sh                     # Verify no alerts
-sudo ./demo.sh                     # Run full demo (~3 min)
+sudo ./demos/demo.sh                     # Run full demo (~3 min)
 ```
 
 ---
@@ -87,7 +87,7 @@ without visible interactive login.
 sudo ./hids.sh --baseline
 
 # Full orchestrated demo (recommended)
-sudo ./demo.sh
+sudo ./demos/demo.sh
 
 # OR run scenarios individually:
 
@@ -212,6 +212,6 @@ To use HIDS on your own system:
 Documentation:
   - README.md     → How to use
   - research.md   → Why we built it this way
-  - DEMO.md       → Detailed walkthrough
+  - docs/DEMO.md       → Detailed walkthrough
   - hids.conf     → All tuning options
 ```

@@ -127,12 +127,14 @@ header "Installation Complete"
 
 printf '\n%sNext steps:%s\n' "$C_BOLD" "$C_RESET"
 printf '  1. Test the HIDS: sudo ./hids.sh\n'
-printf '  2. Run the demo: sudo ./demo.sh\n'
+printf '  2. Run the demo: sudo ./demos/demo.sh\n'
 printf '  3. Check logs: sudo tail -f /var/log/hids/alerts.log\n'
 printf '  4. Parse JSON: jq . /var/log/hids/alerts.jsonl\n\n'
+printf '  5. Verify alert hashes: sudo ./tools/verify_logs.sh\n\n'
 
 printf '%sDocumentation:%s\n' "$C_BOLD" "$C_RESET"
 printf '  - README.md for usage and customization\n'
+printf '  - docs/DEMO.md for the interactive demonstration walkthrough\n'
 printf '  - research.md for technical background\n'
 printf '  - hids.conf to adjust thresholds and whitelists\n\n'
 

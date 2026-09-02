@@ -10,7 +10,7 @@ the key questions you must be able to answer during review.
 The simplest way to see everything at once:
 
 ```bash
-sudo ./demo.sh
+sudo ./demos/demo.sh
 ```
 
 This runs three detection scenarios in sequence, with explanations and cleanup.

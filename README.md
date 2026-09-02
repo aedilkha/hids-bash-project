@@ -124,7 +124,7 @@ Then enable it:
 
 To see the HIDS in action, use the automated demo:
 
-    sudo ./demo.sh
+    sudo ./demos/demo.sh
 
 This orchestrates three threat scenarios sequentially:
 - **PRC-001**: Detects a process executable copied into /tmp
@@ -153,6 +153,17 @@ Then run the corresponding module scan:
     sudo ./hids.sh --module 4    # See FIM alerts
     sudo ./hids.sh --module 2    # See USR alerts
 
+## Alert log integrity
+
+Human-readable alerts are stored in `/var/log/hids/alerts.log` and structured
+alerts in `alerts.jsonl`. Each emitted alert is also added to the chained
+SHA-256 file `alerts.sha256`. Verify the chain with:
+
+    sudo ./tools/verify_logs.sh
+
+The hash chain detects changes to records, but it is not protection against an
+attacker with root access who can rewrite both the logs and the chain.
+
 ## Troubleshooting the demo
 
 **"No alerts detected"**
@@ -172,4 +183,5 @@ Then run the corresponding module scan:
     libs/common.sh   Core: alerting, dedup, baseline, colors
     modules/         One file per module
     tools/           Helper scripts (attack simulation for the demo)
-    demo.sh          Master demo orchestrator (run this for a full demo)
+    demos/           Interactive demo launchers
+    docs/            User, implementation and presentation documentation

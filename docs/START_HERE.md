@@ -8,7 +8,7 @@ Welcome to the HIDS (Host Intrusion Detection System) project. This file tells y
 
 ```bash
 cd ~/hids
-sudo ./demo.sh
+sudo ./demos/demo.sh
 ```
 
 That's it. Done in 3 minutes. Demonstrates all threat detection capabilities.
@@ -23,7 +23,7 @@ cd ~/hids
 sudo ./hids.sh --baseline          # Capture clean state (1 min)
 
 # 2. Run automated demo
-sudo ./demo.sh                     # Shows all scenarios (2 min)
+sudo ./demos/demo.sh                     # Shows all scenarios (2 min)
 
 # 3. See the alerts
 tail /var/log/hids/alerts.log      # 30 seconds to review
@@ -53,7 +53,7 @@ sudo ./tools/demo_suspicious_user.sh & # Scenario C: backdoor
 
 ## If You Need To Answer 6 Questions
 
-Read **DEMO.md** — it has complete answers to:
+Read **docs/DEMO.md** — it has complete answers to:
 1. Where does each data point come from?
 2. What's the difference between HIDS and NIDS?
 3. How would an attacker evade this?
@@ -61,7 +61,7 @@ Read **DEMO.md** — it has complete answers to:
 5. How do you reduce false positives?
 6. What would you build next?
 
-**Located**: `cat DEMO.md | grep "^###"` (shows all 6)
+**Located**: `cat docs/DEMO.md | grep "^###"` (shows all 6)
 
 ---
 
@@ -69,7 +69,7 @@ Read **DEMO.md** — it has complete answers to:
 
 Run this the day before:
 ```bash
-cat READYFOR_PRESENTATION.md
+cat docs/READYFOR_PRESENTATION.md
 ```
 
 It has:
@@ -117,18 +117,18 @@ A **HIDS** monitors one computer for signs of attack. This one checks:
 
 ```
 hids/
-├── demo.sh                ← Run this to see everything
+├── demos/                                  ← Run this to see everything
 ├── hids.sh                ← The actual HIDS tool
 ├── README.md              ← How to use & customize
-├── DEMO.md                ← Demo walkthrough & Q&A answers
-├── READYFOR_PRESENTATION.md ← Pre-demo checklist
-├── FILE_MANIFEST.txt      ← What each file does
+│   └── QUICK_DEMO.sh                ← Demo walkthrough & Q&A answers
+├── docs/READYFOR_PRESENTATION.md ← Pre-demo checklist
+├── docs/FILE_MANIFEST.txt      ← What each file does
 ├── modules/               ← 4 detection modules
 ├── tools/                 ← Demo scripts
 └── logs/                  ← Alert output (alerts.log, alerts.jsonl)
 ```
 
-**For more detail**: Read `FILE_MANIFEST.txt`
+**For more detail**: Read `docs/FILE_MANIFEST.txt`
 
 ---
 
@@ -141,7 +141,7 @@ hids/
 | "Alert doesn't repeat" | Wait 60 seconds (cooldown) or edit hids.conf |
 | "Text too small" | Zoom terminal or use `stty cols 200 rows 50` |
 
-**For more help**: See `READYFOR_PRESENTATION.md` → "Potential Issues & Fixes"
+**For more help**: See `docs/READYFOR_PRESENTATION.md` → "Potential Issues & Fixes"
 
 ---
 
@@ -149,7 +149,7 @@ hids/
 
 ### To Run Demo
 ```
-sudo ./demo.sh
+sudo ./demos/demo.sh
 ```
 
 ### To Use in Production
@@ -160,16 +160,16 @@ sudo ./install.sh
 ### To Learn More
 ```
 cat README.md           # How to use
-cat DEMO.md             # Demo details
+cat docs/DEMO.md             # Demo details
 cat research.md         # Why we built it this way
-cat IMPLEMENTATION.md   # What was built
+cat docs/IMPLEMENTATION.md   # What was built
 ```
 
 ---
 
 ## Success Looks Like
 
-After running `sudo ./demo.sh`, you'll see:
+After running `sudo ./demos/demo.sh`, you'll see:
 
 ```
 ✓ Baseline created
@@ -191,11 +191,11 @@ And in the logs:
 
 **Run the demo now:**
 ```bash
-cd ~/hids && sudo ./demo.sh
+cd ~/hids && sudo ./demos/demo.sh
 ```
 
-**Questions after the demo?** Check DEMO.md (the 6 Q&A answers are there)
+**Questions after the demo?** Check docs/DEMO.md (the 6 Q&A answers are there)
 
-**Help with anything?** → `READYFOR_PRESENTATION.md`
+**Help with anything?** → `docs/READYFOR_PRESENTATION.md`
 
 Good luck! 🚀

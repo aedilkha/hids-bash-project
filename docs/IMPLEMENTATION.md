@@ -21,8 +21,8 @@ This document summarizes what has been implemented and how to run the demonstrat
 ### 3. Documentation
 - **README.md**: User guide with quick start, customization, and automatic execution setup
 - **research.md**: Technical background (what we learned before coding)
-- **DEMO.md**: Complete guide to running demonstrations and answering review questions
-- **DEMO_CHEATSHEET.md**: Quick reference for live presentation
+- **docs/DEMO.md**: Complete guide to running demonstrations and answering review questions
+- **docs/DEMO_CHEATSHEET.md**: Quick reference for live presentation
 
 ### 4. Deployment & Configuration
 - **hids.conf**: Production configuration (tunable thresholds and whitelists)
@@ -44,7 +44,7 @@ This document summarizes what has been implemented and how to run the demonstrat
 cd ~/hids
 
 # Run the automated demo (includes baseline capture, all scenarios, cleanup)
-sudo ./demo.sh
+sudo ./demos/demo.sh
 ```
 
 That's it. The script will:
@@ -127,12 +127,12 @@ hids/
 ├── hids.conf                  # Production config
 ├── hids.demo.conf             # Demo config (less noisy)
 ├── install.sh                 # Auto-setup script
-├── demo.sh                    # Automated demo orchestrator
+├── demos/                                      # Automated demo orchestrator
 ├── README.md                  # User documentation
 ├── research.md                # Technical background
-├── DEMO.md                    # Demo walkthrough + 6 Q&A
-├── DEMO_CHEATSHEET.md         # Quick reference for presentation
-├── IMPLEMENTATION.md          # This file
+│   └── QUICK_DEMO.sh                    # Demo walkthrough + 6 Q&A
+├── docs/DEMO_CHEATSHEET.md         # Quick reference for presentation
+├── docs/IMPLEMENTATION.md          # This file
 │
 ├── libs/
 │   └── common.sh              # Shared alerting & baseline logic
@@ -168,7 +168,7 @@ hids/
 
 ## Answering the 6 Demo Questions
 
-See **DEMO.md** for detailed answers to:
+See **docs/DEMO.md** for detailed answers to:
 1. Where does each piece of data come from?
 2. What's the difference between HIDS and NIDS?
 3. How would a sophisticated attacker evade this?

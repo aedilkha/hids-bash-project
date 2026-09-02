@@ -6,7 +6,9 @@
 
 set -u
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export FORCE_COLOR=1
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$SCRIPT_DIR"
 
 printf '\n=== HIDS 5-MINUTE DEMO ===\n\n'
@@ -19,9 +21,9 @@ printf '  4. Alert logging\n\n'
 # Check for root
 if [[ $(id -u) -ne 0 ]]; then
     printf 'Error: This demo requires root privileges.\n'
-    printf 'Run: sudo ./QUICK_DEMO.sh\n'
+    printf 'Run: sudo ./demos/QUICK_DEMO.sh\n'
     exit 1
 fi
 
 printf 'Running full orchestrated demo...\n\n'
-exec sudo bash demo.sh
+exec bash "$SCRIPT_DIR/demos/demo.sh"
