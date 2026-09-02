@@ -123,39 +123,61 @@ run_presentation_demo() {
     printf '%sGuided HIDS presentation%s\n' "$C_BOLD" "$C_RESET"
     printf 'Each pause tells you exactly what to explain or show.\n'
 
-    presentation_pause 'Step 1/8: We capture a clean baseline before monitoring.'
+    presentation_pause 'Step 1/10: We capture a clean baseline before monitoring.'
     printf 'demo baseline file\n' > "$demo_file"
     chmod 600 "$demo_file"
     "$HIDS_SCRIPT" --config "$SCRIPT_DIR/hids.demo.conf" --baseline --no-color
 
-    presentation_pause 'Step 2/8: We run a clean full scan and explain the four modules.'
+    presentation_pause 'Step 2/10: We run a clean full scan and explain the four modules.'
     "$HIDS_SCRIPT" --config "$SCRIPT_DIR/hids.demo.conf" --no-color
 
-    presentation_pause 'Step 3/8: Start the simulated process in /tmp, then we scan Module 3.'
+    presentation_pause 'Step 3/10: We show the automatic schedulers that launch HIDS every 15 minutes.'
+    printf 'Short explanation: cron and systemd timer automate execution; they do not detect threats themselves.\n\n'
+    printf '%sCron configuration%s\n' "$C_BOLD" "$C_RESET"
+    if crontab_line="$(crontab -l 2>/dev/null | grep -F "$HIDS_SCRIPT" || true)" && [[ -n "$crontab_line" ]]; then
+        printf '%s\n' "$crontab_line"
+    else
+        printf '%sNo user cron entry found.%s\n' "$C_YELLOW" "$C_RESET"
+    fi
+    printf '\n%sSystemd timer%s\n' "$C_BOLD" "$C_RESET"
+    systemctl list-timers hids.timer --no-legend 2>/dev/null || printf '%sSystemd timer unavailable.%s\n' "$C_YELLOW" "$C_RESET"
+    printf '\n%sService chain:%s hids.timer -> hids.service -> hids.sh\n' "$C_DIM" "$C_RESET"
+
+    presentation_pause 'Step 4/10: Start the simulated process in /tmp, then we scan Module 3.'
     "$SCRIPT_DIR/tools/simulate_attack.sh" --prepare-only &
     attack_pid=$!
     sleep 2
     "$HIDS_SCRIPT" --config "$SCRIPT_DIR/hids.demo.conf" --module 3
     wait "$attack_pid" 2>/dev/null || true
 
-    presentation_pause 'Step 4/8: We change a sensitive file permission, then scan Module 4.'
+    presentation_pause 'Step 5/10: We change a sensitive file permission, then scan Module 4.'
     "$SCRIPT_DIR/tools/demo_file_tampering.sh" &
     tampering_pid=$!
     sleep 2
     "$HIDS_SCRIPT" --config "$SCRIPT_DIR/hids.demo.conf" --module 4
     wait "$tampering_pid" 2>/dev/null || true
 
-    presentation_pause 'Step 5/8: We create a low-UID interactive account, then scan Module 2.'
+    presentation_pause 'Step 6/10: We create a low-UID interactive account, then scan Module 2.'
     "$SCRIPT_DIR/tools/demo_suspicious_user.sh" &
     user_pid=$!
     sleep 2
     "$HIDS_SCRIPT" --config "$SCRIPT_DIR/hids.demo.conf" --module 2
     wait "$user_pid" 2>/dev/null || true
 
-    presentation_pause 'Step 6/8: We display the latest human-readable alerts.'
+    presentation_pause 'Step 7/10: We display the latest human-readable alerts.'
     view_alerts
 
-    presentation_pause 'Step 7/8: We show the machine-readable JSONL alerts and their severity.'
+    presentation_pause 'Step 8/10: We confirm that HIGH and CRITICAL alerts are sent by email.'
+    printf 'Short explanation: the demo email threshold is HIGH, so the detected scenarios can notify Gmail.\n'
+    if command -v mail >/dev/null 2>&1 && [[ -r /root/.config/msmtp/config ]]; then
+        printf '%sEmail transport: configured%s\n' "$C_GREEN" "$C_RESET"
+        printf 'Recipient: %s\nMinimum severity: HIGH\n' "$ALERT_EMAIL"
+        printf 'Check delivery details with: sudo journalctl -t msmtp -n 10 --no-pager\n'
+    else
+        printf '%sEmail transport is not configured; alerts remain in local logs.%s\n' "$C_YELLOW" "$C_RESET"
+    fi
+
+    presentation_pause 'Step 9/10: We show the machine-readable JSONL alerts and their severity.'
     if [[ -r "$ALERT_JSON" ]]; then
         tail -10 "$ALERT_JSON"
     else
@@ -163,7 +185,7 @@ run_presentation_demo() {
     fi
     press_enter
 
-    presentation_pause 'Step 8/8: We conclude with the exit-code model: 0 clean, 1 review, 2 critical.'
+    presentation_pause 'Step 10/10: We conclude with the exit-code model: 0 clean, 1 review, 2 critical.'
     printf '%sGuided presentation complete.%s\n' "$C_GREEN" "$C_RESET"
     printf 'Mention that this is periodic host monitoring, not automatic blocking.\n'
     rm -f "$demo_file"
