@@ -102,6 +102,9 @@ check_high_resource() {
     return 0
 }
 
+# check_high_resource uses one ps sample by design; repeated scans are protected
+# by the alert cooldown, while operators can tune thresholds in hids.conf.
+
 # check_listening_ports: any listening port outside PORT_WHITELIST is a
 # potential backdoor or unexpected service. 0.0.0.0 (network-exposed) is
 # more severe than 127.0.0.1/::1 (localhost only).
@@ -224,9 +227,18 @@ check_cron_jobs() {
 # baseline is a common persistence mechanism (auto-start on boot).
 # Source: systemctl list-units, compared against the shared baseline store.
 check_new_services() {
-    local current_services svc found=0
+    local current_services svc found=0 excluded pattern
 
     current_services="$(systemctl list-units --type=service --no-legend 2>/dev/null | awk '{print $1}' | sort)"
+
+    for pattern in ${SYSTEMD_SERVICE_EXCLUDE:-}; do
+        current_services="$(grep -vxF "$pattern" <<< "$current_services" 2>/dev/null || true)"
+        if [[ "$pattern" == *'*' || "$pattern" == *'?'* ]]; then
+            current_services="$(while IFS= read -r svc; do
+                [[ "$svc" == $pattern ]] || printf '%s\n' "$svc"
+            done <<< "$current_services")"
+        fi
+    done
 
     if [[ $BASELINE_MODE -eq 1 ]]; then
         echo "$current_services" | baseline_set "services"

@@ -52,6 +52,12 @@ mkdir -p /var/log/hids /var/lib/hids || error "Could not create directories"
 chmod 755 /var/log/hids /var/lib/hids
 success "Directories created"
 
+if [[ -f "$SCRIPT_DIR/etc/logrotate.d/hids" ]]; then
+    install -o root -g root -m 644 "$SCRIPT_DIR/etc/logrotate.d/hids" /etc/logrotate.d/hids \
+        || error "Could not install log rotation policy"
+    success "Log rotation policy installed"
+fi
+
 # Step 2: Create baseline
 info "Creating initial baseline (this may take a minute)..."
 cd "$SCRIPT_DIR"

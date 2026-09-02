@@ -185,3 +185,54 @@ attacker with root access who can rewrite both the logs and the chain.
     tools/           Helper scripts (attack simulation for the demo)
     demos/           Interactive demo launchers
     docs/            User, implementation and presentation documentation
+
+## Operational hardening
+
+The current implementation validates configuration before scanning, writes
+baseline files atomically, and uses `flock` to prevent overlapping scans when
+cron and systemd are both enabled. Syslog forwarding is optional with
+`SYSLOG_ENABLED=1`, and `etc/logrotate.d/hids` provides local log rotation.
+
+Run the non-destructive smoke test with:
+
+    ./tests/smoke.sh
+
+Run the isolated integration suite with:
+
+    ./tests/integration.sh
+
+This suite uses temporary logs, state, authentication fixtures, user database
+fixtures, watched files and a temporary process. It verifies the real command
+path from `hids.sh` through the modules and `alert()`, including JSONL output
+and severity. It requires no root privileges and cleans up on exit. The suite
+covers deterministic alert scenarios; host-dependent checks such as disk
+capacity, reboot state, kernel telemetry and live service ownership still need
+environment-specific tests.
+
+For a foreground continuous monitor, use a positive interval in seconds:
+
+    sudo ./hids.sh --watch 60 --no-color
+
+Optional integrations can be enabled in `hids.conf` with
+`SYSLOG_ENABLED=1`. Set `SYSLOG_SERVER` and `SYSLOG_PORT` for a remote syslog
+receiver, or set `ALERT_EMAIL` when a local `mail` command is configured. These
+integrations require the corresponding system service and are disabled by
+default.
+
+Use one scheduler in normal operation. Systemd timer is recommended because
+its status and output are easy to inspect:
+
+    systemctl list-timers hids.timer
+    journalctl -u hids.service
+
+## Production-readiness status
+
+This is a hardened educational prototype, not a replacement for an EDR,
+auditd or Wazuh. Before production use, review the target distribution and
+threat model, install under a root-owned directory such as `/opt/hids`, tune
+all whitelists, and test every detection scenario.
+
+The baseline and local logs remain modifiable by root. Local hash chaining is
+tamper-evident, not tamper-proof. A production deployment should sign or store
+the baseline elsewhere, forward alerts to a remote syslog or SIEM, configure
+critical notifications, and define an incident response procedure.

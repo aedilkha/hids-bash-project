@@ -102,8 +102,8 @@ EOF
 
 # run_hids_command: execute an hids.sh command and show result
 run_hids_command() {
-    local cmd="$1"
-    local description="$2"
+    local description="$1"
+    shift
     
     clear_screen
     print_header
@@ -112,7 +112,7 @@ run_hids_command() {
     
     if [[ -x "$HIDS_SCRIPT" ]]; then
         # Execute the command
-        eval "$cmd"
+        "$HIDS_SCRIPT" "$@"
         local exit_code=$?
         
         echo ""
@@ -241,36 +241,30 @@ main_loop() {
         case "$choice" in
             1)
                 run_hids_command \
-                    "\"$HIDS_SCRIPT\"" \
                     "Running Full Analysis..."
                 ;;
             2)
                 run_hids_command \
-                    "\"$HIDS_SCRIPT\" --module 1" \
-                    "Running System Health Check (Module 1)..."
+                    "Running System Health Check (Module 1)..." --module 1
                 ;;
             3)
                 run_hids_command \
-                    "\"$HIDS_SCRIPT\" --module 2" \
-                    "Running User Activity Check (Module 2)..."
+                    "Running User Activity Check (Module 2)..." --module 2
                 ;;
             4)
                 run_hids_command \
-                    "\"$HIDS_SCRIPT\" --module 3" \
-                    "Running Process & Network Check (Module 3)..."
+                    "Running Process & Network Check (Module 3)..." --module 3
                 ;;
             5)
                 run_hids_command \
-                    "\"$HIDS_SCRIPT\" --module 4" \
-                    "Running File Integrity Check (Module 4)..."
+                    "Running File Integrity Check (Module 4)..." --module 4
                 ;;
             6)
                 view_alerts
                 ;;
             7)
                 run_hids_command \
-                    "\"$HIDS_SCRIPT\" --baseline" \
-                    "Capturing Baseline State..."
+                    "Capturing Baseline State..." --baseline
                 ;;
             8)
                 view_config

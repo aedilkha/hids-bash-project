@@ -19,7 +19,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 printf 'Simulated attack: suspicious user account created\n'
-printf 'Expected detection: USR-002 (new privileged-like account)\n\n'
+printf 'Expected detection: USR-008 (new interactive account with low UID)\n\n'
 
 # Check if we have root
 if [[ $(id -u) -ne 0 ]]; then
@@ -33,7 +33,7 @@ if useradd -u "$DEMO_UID" -s /bin/bash "$DEMO_USER" 2>/dev/null; then
     printf 'Created user: %s (UID: %d)\n' "$DEMO_USER" "$DEMO_UID"
     printf 'This looks like a system account but is actually interactive.\n'
     printf 'Run: sudo ./hids.sh --module 2\n'
-    printf 'Expected: [MEDIUM] USR-002 Suspicious account with low UID\n\n'
+    printf 'Expected: [MEDIUM] USR-008 Suspicious account with low UID\n\n'
     
     # Give user time to run the check
     printf 'Waiting 10 seconds before cleanup...\n'

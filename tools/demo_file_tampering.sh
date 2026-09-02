@@ -10,8 +10,12 @@ set -u
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEMO_FILE="/tmp/hids-demo-passwd"
 DEMO_BACKUP="/tmp/hids-demo-passwd.bak"
+ORIGINAL_MODE=""
 
 cleanup() {
+    if [[ -n "$ORIGINAL_MODE" && -e /etc/ssh/sshd_config ]]; then
+        chmod "$ORIGINAL_MODE" /etc/ssh/sshd_config 2>/dev/null || true
+    fi
     rm -f "$DEMO_FILE" "$DEMO_BACKUP"
 }
 trap cleanup EXIT INT TERM
@@ -30,7 +34,8 @@ printf 'Expected detection: FIM-001 (permissions too broad)\n\n'
 # Make /etc/ssh/sshd_config world-readable (bad)
 # First, check if we can do this
 if [[ -w /etc/ssh/sshd_config ]]; then
-    cp /etc/ssh/sshd_config "$DEMO_BACKUP"
+    ORIGINAL_MODE="$(stat -c '%a' /etc/ssh/sshd_config)"
+    cp -p /etc/ssh/sshd_config "$DEMO_BACKUP"
     chmod 644 /etc/ssh/sshd_config  # Should be 600
     printf 'Changed /etc/ssh/sshd_config permissions to 644 (was 600)\n'
     printf 'Run: sudo ./hids.sh --module 4\n'
@@ -42,7 +47,8 @@ if [[ -w /etc/ssh/sshd_config ]]; then
     
     # Restore
     if [[ -f "$DEMO_BACKUP" ]]; then
-        cp "$DEMO_BACKUP" /etc/ssh/sshd_config
+        cp -p "$DEMO_BACKUP" /etc/ssh/sshd_config
+        chmod "$ORIGINAL_MODE" /etc/ssh/sshd_config
         rm -f "$DEMO_BACKUP"
         printf 'Restored /etc/ssh/sshd_config\n'
     fi

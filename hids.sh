@@ -18,7 +18,8 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
-readonly VERSION="1.0"
+readonly VERSION="1.1"
+LOCK_FD=""
 
 # --- Global alert counters (incremented by alert() in common.sh) ---
 ALERT_COUNT_CRITICAL=0
@@ -38,6 +39,7 @@ Usage: $0 [options]
   --config FILE  Configuration file (default: ./hids.conf)
   --no-color     Disable colors
   --quiet        Show only alerts (no context lines)
+    --watch SEC    Repeat full scans every SEC seconds
   -h, --help     Show this help
 
 Exit codes: 0 = nothing to report, 1 = MEDIUM/HIGH alerts, 2 = CRITICAL
@@ -51,14 +53,22 @@ ONLY_MODULE=""
 BASELINE_MODE=0
 NO_COLOR=0
 QUIET=0
+WATCH_INTERVAL=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --module)   ONLY_MODULE="$2"; shift 2 ;;
+        --module)
+            [[ $# -ge 2 && "$2" =~ ^[1-4]$ ]] || { echo "--module requires a number from 1 to 4" >&2; exit 64; }
+            ONLY_MODULE="$2"; shift 2 ;;
         --baseline) BASELINE_MODE=1;  shift   ;;
-        --config)   CONFIG_FILE="$2"; shift 2 ;;
+        --config)
+            [[ $# -ge 2 && -r "$2" ]] || { echo "--config requires a readable file" >&2; exit 64; }
+            CONFIG_FILE="$2"; shift 2 ;;
         --no-color) NO_COLOR=1;       shift   ;;
         --quiet)    QUIET=1;          shift   ;;
+        --watch)
+            [[ $# -ge 2 && "$2" =~ ^[1-9][0-9]*$ ]] || { echo "--watch requires a positive number of seconds" >&2; exit 64; }
+            WATCH_INTERVAL="$2"; shift 2 ;;
         -h|--help)  usage ;;
         *) echo "Unknown option: $1" >&2; exit 64 ;;
     esac
@@ -69,7 +79,15 @@ export NO_COLOR QUIET BASELINE_MODE
 # --- Load the core ---
 source "$SCRIPT_DIR/libs/common.sh"
 load_config "$CONFIG_FILE"
+validate_config || exit 78
 setup_colors
+
+# A cron job and a systemd timer may coexist during migration. Only one scan
+# should inspect and update shared state at a time.
+if command -v flock >/dev/null 2>&1; then
+    exec {LOCK_FD}>"$LOCK_FILE" || { echo "Cannot open lock file: $LOCK_FILE" >&2; exit 75; }
+    flock -n "$LOCK_FD" || { echo "Another HIDS scan is already running" >&2; exit 75; }
+fi
 
 # --- Load the modules (each defines one public function run_<name>) ---
 for module in "$SCRIPT_DIR"/modules/*.sh; do
@@ -132,5 +150,16 @@ main() {
     print_summary
 }
 
-main
-exit $?
+if (( WATCH_INTERVAL > 0 )); then
+    while true; do
+        ALERT_COUNT_CRITICAL=0
+        ALERT_COUNT_HIGH=0
+        ALERT_COUNT_MEDIUM=0
+        ALERT_COUNT_INFO=0
+        main
+        sleep "$WATCH_INTERVAL"
+    done
+else
+    main
+    exit $?
+fi

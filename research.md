@@ -327,3 +327,43 @@ With two more weeks, we would add signed or offline baselines, authenticated
 remote log export, and a live monitoring mode. Email notification is also
 listed in the configuration as a future integration, but is not enabled by
 the current native-tools-only implementation.
+
+## 6. Current hardening and professionalization plan
+
+The current branch addresses the first operational risks found during live
+scheduled runs:
+
+- CLI arguments and numeric thresholds are validated before scanning;
+- `flock` prevents concurrent cron and systemd scans;
+- baseline writes use a temporary file followed by an atomic rename;
+- dynamic systemd session services can be excluded through configuration;
+- optional syslog forwarding is available through `SYSLOG_ENABLED=1`;
+- `install.sh` installs a logrotate policy;
+- the tampering demo restores the original file mode;
+- the menu executes fixed arguments directly instead of using `eval`;
+- `tests/smoke.sh` checks syntax and basic CLI failures without modifying the
+  monitored host.
+- `tests/integration.sh` executes isolated end-to-end scenarios and verifies
+  alert code, severity and JSONL output for deterministic detections.
+- `--watch SEC` provides a foreground continuous polling mode with per-cycle
+  counters.
+- optional syslog forwarding can target a remote host, and email notifications
+  can be enabled for a configured minimum severity.
+
+The remaining work for a professional deployment is:
+
+1. Reliability: add integration tests for each detection and non-root mode,
+   scheduler health checks, recovery tests and configuration linting.
+2. Signal quality: tune host-specific exclusions, support distribution-specific
+   paths, improve IPv4/IPv6 parsing, and require repeated samples for resource
+   alerts.
+3. Trust: use a root-owned installation, signed or remote baselines,
+   authenticated remote logging, restricted permissions and trusted time.
+4. Operations: add critical notifications, retention and rotation checks,
+   incident context, metrics and a response playbook.
+5. Detection depth: integrate audit or kernel telemetry, DNS analysis,
+   persistence coverage and continuous monitoring.
+
+The project is suitable for education, demonstrations and carefully tuned lab
+use. It should not claim complete production readiness until the target OS,
+test fixtures, remote logging and incident procedures have been validated.

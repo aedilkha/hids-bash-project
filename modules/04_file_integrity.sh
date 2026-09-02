@@ -86,6 +86,7 @@ suid_snapshot() {
 build_baseline() {
     file_hash_snapshot | baseline_set "file_hashes"
     suid_snapshot | baseline_set "suid_binaries"
+    sha256sum "$BASELINE_DIR/file_hashes" "$BASELINE_DIR/suid_binaries" | baseline_set "baseline_manifest"
     ok "Baseline: watched-file hashes recorded"
     ok "Baseline: SUID binary list recorded"
 }
@@ -233,6 +234,10 @@ run_file_integrity() {
     if [[ $BASELINE_MODE -eq 1 ]]; then
         build_baseline
         return 0
+    fi
+
+    if ! baseline_manifest_check; then
+        alert HIGH "FIM-006" "baseline_manifest" "Baseline records differ from their integrity manifest"
     fi
 
     check_file_hashes

@@ -1,0 +1,8 @@
+/var/log/hids/alerts.log /var/log/hids/alerts.jsonl /var/log/hids/alerts.sha256 /var/log/hids/cron.log {
+    daily
+    rotate 30
+    compress
+    missingok
+    notifempty
+    create 0600 root root
+}

@@ -173,7 +173,7 @@ check_current_sessions() {
 # classic, easily overlooked backdoor. Source: field 3 of /etc/passwd.
 check_uid_zero() {
     local accounts
-    accounts="$(awk -F: '$3 == 0 {print $1}' /etc/passwd)"
+    accounts="$(awk -F: '$3 == 0 {print $1}' "${PASSWD_FILE:-/etc/passwd}")"
     while read -r account; do
         [[ -z "$account" ]] && continue
         if [[ "$account" != "root" && $BASELINE_MODE -eq 0 ]]; then
@@ -186,7 +186,7 @@ check_uid_zero() {
 # check_new_accounts: compare account names with the reference passwd snapshot.
 check_new_accounts() {
     local current account
-    current="$(cut -d: -f1 /etc/passwd | sort -u)"
+    current="$(cut -d: -f1 "${PASSWD_FILE:-/etc/passwd}" | sort -u)"
 
     if [[ $BASELINE_MODE -eq 1 ]]; then
         printf '%s\n' "$current" | baseline_set "user_accounts"
@@ -201,15 +201,41 @@ check_new_accounts() {
     fi
 }
 
+# check_low_uid_accounts: a newly created interactive account below the normal
+# user UID range is suspicious, even when it does not have UID 0.
+check_low_uid_accounts() {
+    local account uid shell baseline current found=0
+    current="$(awk -F: -v limit="$LOW_UID_THRESHOLD" '$3 < limit && $1 != "root" && $7 !~ /(nologin|false)$/ {print $1 "|" $3 "|" $7}' "${PASSWD_FILE:-/etc/passwd}")"
+
+    if [[ $BASELINE_MODE -eq 1 ]]; then
+        printf '%s\n' "${current:-<none>}" | baseline_set "low_uid_accounts"
+        return 0
+    fi
+    if ! baseline_exists "low_uid_accounts"; then
+        kv "Low-UID interactive accounts" "baseline not captured"
+        return 0
+    fi
+    baseline="$(baseline_get "low_uid_accounts")"
+    while IFS='|' read -r account uid shell; do
+        [[ -z "$account" || "$account" == "<none>" ]] && continue
+        if ! grep -Fqx "$account|$uid|$shell" <<< "$baseline"; then
+            alert MEDIUM "USR-008" "$account" "New interactive account '$account' has low UID $uid and shell $shell"
+            found=1
+        fi
+    done <<< "$current"
+    (( found == 0 )) && ok "No new low-UID interactive account detected"
+}
+
 # check_empty_passwords: an empty shadow hash permits passwordless access.
 check_empty_passwords() {
     local accounts account
-    if [[ ! -r /etc/shadow ]]; then
+    local shadow_file="${SHADOW_FILE:-/etc/shadow}"
+    if [[ ! -r "$shadow_file" ]]; then
         kv "Empty password check" "unavailable (run as root to read /etc/shadow)"
         return 0
     fi
 
-    accounts="$(awk -F: '$2 == "" {print $1}' /etc/shadow)"
+    accounts="$(awk -F: '$2 == "" {print $1}' "$shadow_file")"
     if [[ -z "$accounts" ]]; then
         ok "No account has an empty password field"
         return 0
@@ -265,6 +291,7 @@ run_user_activity() {
     check_current_sessions
     check_uid_zero
     check_new_accounts
+    check_low_uid_accounts
     check_empty_passwords
     check_sudo_group
     return 0
