@@ -93,11 +93,77 @@ ${C_BOLD}SELECT AN OPTION:${C_RESET}
     ${C_BLUE}6${C_RESET}) View Latest Alerts
     ${C_BLUE}7${C_RESET}) Capture Baseline State
     ${C_BLUE}8${C_RESET}) View Configuration
+    ${C_MAGENTA}10${C_RESET}) Guided Presentation Demo
    
     ${C_YELLOW}9${C_RESET}) View Help
     ${C_RED}0${C_RESET}) Exit
 
 EOF
+}
+
+# presentation_pause: keep the presenter in control and state what to show.
+presentation_pause() {
+    printf '\n%s%s%s\n' "$C_BOLD" "$1" "$C_RESET"
+    printf '%sPress ENTER to continue...%s ' "$C_DIM" "$C_RESET"
+    IFS= read -r || exit 0
+}
+
+# run_presentation_demo: guided, reversible demonstration for live presentation.
+run_presentation_demo() {
+    local output_file attack_pid tampering_pid user_pid
+    if [[ $(id -u) -ne 0 ]]; then
+        printf '%sThe guided demo requires root privileges. Run: sudo ./menu%s\n' "$C_RED" "$C_RESET"
+        press_enter
+        return
+    fi
+
+    clear_screen
+    print_header
+    printf '%sGuided HIDS presentation%s\n' "$C_BOLD" "$C_RESET"
+    printf 'Each pause tells you exactly what to explain or show.\n'
+
+    presentation_pause 'Step 1/8: We capture a clean baseline before monitoring.'
+    "$HIDS_SCRIPT" --baseline --no-color
+
+    presentation_pause 'Step 2/8: We run a clean full scan and explain the four modules.'
+    "$HIDS_SCRIPT" --no-color
+
+    presentation_pause 'Step 3/8: Start the simulated process in /tmp, then we scan Module 3.'
+    "$SCRIPT_DIR/tools/simulate_attack.sh" --prepare-only &
+    attack_pid=$!
+    sleep 2
+    "$HIDS_SCRIPT" --module 3
+    wait "$attack_pid" 2>/dev/null || true
+
+    presentation_pause 'Step 4/8: We change a sensitive file permission, then scan Module 4.'
+    "$SCRIPT_DIR/tools/demo_file_tampering.sh" &
+    tampering_pid=$!
+    sleep 2
+    "$HIDS_SCRIPT" --module 4
+    wait "$tampering_pid" 2>/dev/null || true
+
+    presentation_pause 'Step 5/8: We create a low-UID interactive account, then scan Module 2.'
+    "$SCRIPT_DIR/tools/demo_suspicious_user.sh" &
+    user_pid=$!
+    sleep 2
+    "$HIDS_SCRIPT" --module 2
+    wait "$user_pid" 2>/dev/null || true
+
+    presentation_pause 'Step 6/8: We display the latest human-readable alerts.'
+    view_alerts
+
+    presentation_pause 'Step 7/8: We show the machine-readable JSONL alerts and their severity.'
+    if [[ -r "$ALERT_JSON" ]]; then
+        tail -10 "$ALERT_JSON"
+    else
+        printf '%sNo JSON alert log found at %s%s\n' "$C_YELLOW" "$ALERT_JSON" "$C_RESET"
+    fi
+    press_enter
+
+    presentation_pause 'Step 8/8: We conclude with the exit-code model: 0 clean, 1 review, 2 critical.'
+    printf '%sGuided presentation complete.%s\n' "$C_GREEN" "$C_RESET"
+    printf 'Mention that this is periodic host monitoring, not automatic blocking.\n'
+    press_enter
 }
 
 # run_hids_command: execute an hids.sh command and show result
@@ -255,7 +321,7 @@ main_loop() {
         print_header
         print_menu
         
-        printf "${C_BOLD}Enter your choice (0-9):${C_RESET} "
+        printf "${C_BOLD}Enter your choice (0-10):${C_RESET} "
         if ! IFS= read -r choice; then
             printf '\n%sNo more input. Exiting menu.%s\n' "$C_YELLOW" "$C_RESET"
             exit 0
@@ -300,6 +366,9 @@ main_loop() {
                 ;;
             9)
                 show_help
+                ;;
+            10)
+                run_presentation_demo
                 ;;
             0)
                 clear_screen
