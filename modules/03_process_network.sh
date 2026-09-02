@@ -112,8 +112,7 @@ check_high_resource() {
 check_listening_ports() {
     local proto localaddr port proc found=0
     [[ $BASELINE_MODE -eq 1 ]] && return 0 
-    while read -r proto _ _ _ localaddr _ proc; do
-        [[ "$proto" == "Netid" ]] && continue
+    while IFS='|' read -r proto localaddr proc; do
         [[ -z "$localaddr" ]] && continue
         port="${localaddr##*:}"
         [[ "$port" =~ ^[0-9]+$ ]] || continue
@@ -129,7 +128,18 @@ check_listening_ports() {
             esac
             found=1
         fi
-    done < <(ss -tulnp 2>/dev/null)
+    done < <(
+        ss -H -tulnp 2>/dev/null | awk '
+            {
+                proc=""
+                if (NF >= 7) {
+                    proc=$7
+                    for (i=8; i<=NF; i++) proc=proc " " $i
+                }
+                print $1 "|" $5 "|" proc
+            }
+        '
+    )
     (( found == 0 )) && ok "No listening port outside PORT_WHITELIST"
     return 0
 }
@@ -139,9 +149,13 @@ check_listening_ports() {
 # should see the full list to judge if anything looks out of place.
 # Source: ss -tupn state established (active TCP/UDP connections).
 check_outbound() {
-    local proto localaddr peeraddr proc peer_ip found=0
-    while read -r proto _ _ _ localaddr peeraddr proc; do
-        [[ "$proto" == "Netid" ]] && continue
+    local proto localaddr peeraddr proc peer_ip found=0 total=0 distinct=0 rank=0
+    local summary_limit="${OUTBOUND_SUMMARY_LIMIT:-8}"
+    local unknown_count=0
+    local current_count
+    declare -A outbound_count outbound_proto outbound_proc
+
+    while IFS='|' read -r proto localaddr peeraddr proc; do
         [[ -z "$peeraddr" ]] && continue
         peer_ip="${peeraddr%:*}"
         peer_ip="${peer_ip#\[}"
@@ -152,12 +166,71 @@ check_outbound() {
                 continue
                 ;;
             *)
-                kv "outbound" "Established connection to public IP: $peer_ip (local: $localaddr), proto $proto, proc: ${proc:-unknown, needs sudo}"
+                ((total++))
+                current_count="${outbound_count[$peer_ip]:-0}"
+                outbound_count["$peer_ip"]="$((current_count + 1))"
+                outbound_proto["$peer_ip"]="$proto"
+                if [[ -z "$proc" || "$proc" == "-" ]]; then
+                    outbound_proc["$peer_ip"]="unknown (run with sudo for process details)"
+                    ((unknown_count++))
+                elif [[ -z "${outbound_proc[$peer_ip]:-}" ]]; then
+                    outbound_proc["$peer_ip"]="$proc"
+                fi
                 found=1
                 ;;
         esac
-    done < <(ss -tupn state established 2>/dev/null)
-    (( found == 0 )) && ok "No established outbound connections to public IPs"
+    done < <(
+        ss -H -tupn state established 2>/dev/null | awk '
+            {
+                # ss output format can differ by protocol:
+                # with state:   netid state recv send local peer [process]
+                # without state: netid recv  send local peer [process]
+                if ($2 ~ /^[A-Z-]+$/) {
+                    local=$5
+                    peer=$6
+                    pstart=7
+                } else {
+                    local=$4
+                    peer=$5
+                    pstart=6
+                }
+
+                proc=""
+                if (NF >= pstart) {
+                    proc=$pstart
+                    for (i=pstart+1; i<=NF; i++) proc=proc " " $i
+                }
+                print $1 "|" local "|" peer "|" proc
+            }
+        '
+    )
+
+    if (( found == 0 )); then
+        ok "No established outbound connections to public IPs"
+        return 0
+    fi
+
+    distinct="${#outbound_count[@]}"
+    kv "outbound summary" "$total connection(s) to $distinct public destination(s)"
+    kv "outbound detail" "Top destinations by active connection count"
+
+    while IFS=$'\t' read -r count ip proto_s proc_s; do
+        ((rank++))
+        kv "outbound #$rank" "x$count -> $ip ($proto_s), proc: $proc_s"
+        (( rank >= summary_limit )) && break
+    done < <(
+        for ip in "${!outbound_count[@]}"; do
+            printf '%s\t%s\t%s\t%s\n' \
+                "${outbound_count[$ip]:-0}" "$ip" "${outbound_proto[$ip]:-unknown}" "${outbound_proc[$ip]:-unknown}"
+        done | sort -rn -k1,1
+    )
+
+    if (( distinct > summary_limit )); then
+        kv "outbound note" "$((distinct - summary_limit)) additional destination(s) omitted"
+    fi
+    if (( unknown_count > 0 )); then
+        kv "outbound note" "Some process names are unavailable without elevated permissions"
+    fi
     return 0
 }
 
@@ -168,8 +241,7 @@ check_outbound() {
 check_reverse_shell() {
     local proto localaddr peeraddr proc pid comm found=0
     [[ $BASELINE_MODE -eq 1 ]] && return 0 
-    while read -r proto _ _ _ localaddr peeraddr proc; do
-        [[ "$proto" == "Netid" ]] && continue
+    while IFS='|' read -r proto localaddr peeraddr proc; do
         [[ -z "$proc" ]] && continue
 
         pid="$(grep -oP 'pid=\K[0-9]+' <<< "$proc")"
@@ -182,7 +254,18 @@ check_reverse_shell() {
                 found=1
                 ;;
         esac
-    done < <(ss -tupn 2>/dev/null)
+    done < <(
+        ss -H -tupn 2>/dev/null | awk '
+            {
+                proc=""
+                if (NF >= 7) {
+                    proc=$7
+                    for (i=8; i<=NF; i++) proc=proc " " $i
+                }
+                print $1 "|" $5 "|" $6 "|" proc
+            }
+        '
+    )
     (( found == 0 )) && ok "No shell process holding an active network connection"
     return 0
 }
