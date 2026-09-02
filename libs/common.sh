@@ -153,9 +153,9 @@ alert() {
 
 # section: a section title in the report.
 section() {
-    local line
-    line="$(printf '%.0s-' $(seq 1 $((60 - ${#1}))))"
-    printf '\n%s%s-- %s %s%s\n' "$C_BOLD" "$C_MAGENTA" "$1" "$line" "$C_RESET"
+    printf '\n%s==================================================================%s\n' "$C_BOLD" "$C_RESET"
+    printf '%s  %s%s\n' "$C_BOLD" "$1" "$C_RESET"
+    printf '%s==================================================================%s\n' "$C_BOLD" "$C_RESET"
 }
 
 # kv: an aligned "key   value" line for factual context (not an alert).
