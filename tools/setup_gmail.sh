@@ -6,7 +6,6 @@ recipient="${1:-alvi.sama28469@gmail.com}"
 sender="${2:-$recipient}"
 config_dir="/root/.config/msmtp"
 config_file="$config_dir/config"
-msmtp_log="/var/log/msmtp.log"
 
 if [[ $(id -u) -ne 0 ]]; then
     printf 'Run this script as root: sudo ./tools/setup_gmail.sh\n' >&2
@@ -27,16 +26,13 @@ printf '\n'
 [[ -n "$app_password" ]] || { printf 'An app password is required.\n' >&2; exit 1; }
 
 install -d -o root -g root -m 700 "$config_dir"
-touch "$msmtp_log"
-chown root:root "$msmtp_log"
-chmod 600 "$msmtp_log"
 umask 077
 cat > "$config_file" <<EOF
 defaults
 auth on
 tls on
 tls_trust_file /etc/ssl/certs/ca-certificates.crt
-logfile $msmtp_log
+syslog on
 
 account gmail
 host smtp.gmail.com

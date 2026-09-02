@@ -228,10 +228,9 @@ stores it in `/root/.config/msmtp/config` with mode 600; it is never committed:
     sudo ./tools/setup_gmail.sh alvi.sama28469@gmail.com
     echo "HIDS test" | mail -s "HIDS test" alvi.sama28469@gmail.com
 
-If msmtp reports that `/var/log/msmtp.log` cannot be opened, repair its
-permissions with `sudo touch /var/log/msmtp.log && sudo chown root:root
-/var/log/msmtp.log && sudo chmod 600 /var/log/msmtp.log`, then rerun the setup
-helper. A Gmail SMTP status `250` still means that the message was accepted.
+The helper uses syslog for msmtp diagnostics, avoiding a separate local log
+permission problem. A Gmail SMTP status `250` means that the message was
+accepted by Gmail.
 
 Use one scheduler in normal operation. Systemd timer is recommended because
 its status and output are easy to inspect:
