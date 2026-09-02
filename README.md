@@ -220,6 +220,14 @@ receiver, or set `ALERT_EMAIL` when a local `mail` command is configured. These
 integrations require the corresponding system service and are disabled by
 default.
 
+For Gmail notifications, install `msmtp`, `msmtp-mta` and `bsd-mailx`, then run
+the setup helper. It asks for the Gmail app password only in the terminal and
+stores it in `/root/.config/msmtp/config` with mode 600; it is never committed:
+
+    sudo apt-get install msmtp msmtp-mta bsd-mailx
+    sudo ./tools/setup_gmail.sh alvi.sama28469@gmail.com
+    echo "HIDS test" | mail -s "HIDS test" alvi.sama28469@gmail.com
+
 Use one scheduler in normal operation. Systemd timer is recommended because
 its status and output are easy to inspect:
 
