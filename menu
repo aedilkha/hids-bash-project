@@ -1,0 +1,3 @@
+#!/bin/bash
+# Menu launcher - redirects to libs/menu.sh
+"$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/libs/menu.sh" "$@"
