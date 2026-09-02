@@ -110,7 +110,8 @@ presentation_pause() {
 
 # run_presentation_demo: guided, reversible demonstration for live presentation.
 run_presentation_demo() {
-    local output_file attack_pid tampering_pid user_pid
+    local output_file attack_pid tampering_pid user_pid demo_file
+    demo_file="/tmp/hids-demo-sensitive.conf"
     if [[ $(id -u) -ne 0 ]]; then
         printf '%sThe guided demo requires root privileges. Run: sudo ./menu%s\n' "$C_RED" "$C_RESET"
         press_enter
@@ -123,30 +124,32 @@ run_presentation_demo() {
     printf 'Each pause tells you exactly what to explain or show.\n'
 
     presentation_pause 'Step 1/8: We capture a clean baseline before monitoring.'
-    "$HIDS_SCRIPT" --baseline --no-color
+    printf 'demo baseline file\n' > "$demo_file"
+    chmod 600 "$demo_file"
+    "$HIDS_SCRIPT" --config "$SCRIPT_DIR/hids.demo.conf" --baseline --no-color
 
     presentation_pause 'Step 2/8: We run a clean full scan and explain the four modules.'
-    "$HIDS_SCRIPT" --no-color
+    "$HIDS_SCRIPT" --config "$SCRIPT_DIR/hids.demo.conf" --no-color
 
     presentation_pause 'Step 3/8: Start the simulated process in /tmp, then we scan Module 3.'
     "$SCRIPT_DIR/tools/simulate_attack.sh" --prepare-only &
     attack_pid=$!
     sleep 2
-    "$HIDS_SCRIPT" --module 3
+    "$HIDS_SCRIPT" --config "$SCRIPT_DIR/hids.demo.conf" --module 3
     wait "$attack_pid" 2>/dev/null || true
 
     presentation_pause 'Step 4/8: We change a sensitive file permission, then scan Module 4.'
     "$SCRIPT_DIR/tools/demo_file_tampering.sh" &
     tampering_pid=$!
     sleep 2
-    "$HIDS_SCRIPT" --module 4
+    "$HIDS_SCRIPT" --config "$SCRIPT_DIR/hids.demo.conf" --module 4
     wait "$tampering_pid" 2>/dev/null || true
 
     presentation_pause 'Step 5/8: We create a low-UID interactive account, then scan Module 2.'
     "$SCRIPT_DIR/tools/demo_suspicious_user.sh" &
     user_pid=$!
     sleep 2
-    "$HIDS_SCRIPT" --module 2
+    "$HIDS_SCRIPT" --config "$SCRIPT_DIR/hids.demo.conf" --module 2
     wait "$user_pid" 2>/dev/null || true
 
     presentation_pause 'Step 6/8: We display the latest human-readable alerts.'
@@ -163,6 +166,7 @@ run_presentation_demo() {
     presentation_pause 'Step 8/8: We conclude with the exit-code model: 0 clean, 1 review, 2 critical.'
     printf '%sGuided presentation complete.%s\n' "$C_GREEN" "$C_RESET"
     printf 'Mention that this is periodic host monitoring, not automatic blocking.\n'
+    rm -f "$demo_file"
     press_enter
 }
 

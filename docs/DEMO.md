@@ -46,7 +46,7 @@ flags any process running from these locations as HIGH priority.
 
 ### Scenario B: File Tampering (FIM-001)
 
-**Simulates**: An attacker modifying a critical system file's permissions.
+**Simulates**: An attacker modifying a sensitive configuration file's permissions.
 
 ```bash
 # Terminal 1: Trigger the file modification
@@ -58,12 +58,13 @@ sudo ./hids.sh --module 4
 
 **Expected Alert**:
 ```
-[HIGH    ] FIM-001 Permissions on /etc/ssh/sshd_config too broad: 644 (expected at most 600)
+[HIGH    ] FIM-001 Permissions on /tmp/hids-demo-sensitive.conf too broad: 666 (expected at most 600)
 ```
 
-**Why this matters**: File integrity is the second line of defense. SSH config
-should only be readable by root (600). If an attacker makes it world-readable,
-they can extract defaults, timing information, or hints about configuration.
+**Why this matters**: File integrity is the second line of defense. The demo
+file should only be readable by its owner (600). If an attacker makes it
+world-writable, the HIDS reports the violation without modifying real SSH
+configuration.
 
 ---
 

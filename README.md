@@ -132,7 +132,8 @@ This orchestrates three threat scenarios sequentially:
 - **USR-002**: Detects a suspicious user account creation (optional)
 
 Each scenario runs, the HIDS scans, you see the alert, and cleanup happens
-automatically. Perfect for showing how detection works in real time.
+automatically. The file-tampering scenario uses a temporary demo file rather
+than changing `/etc/ssh/sshd_config`, so it is repeatable across distributions.
 
 ### Running individual scenarios
 

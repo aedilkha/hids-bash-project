@@ -8,52 +8,22 @@
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEMO_FILE="/tmp/hids-demo-passwd"
-DEMO_BACKUP="/tmp/hids-demo-passwd.bak"
-ORIGINAL_MODE=""
+DEMO_FILE="/tmp/hids-demo-sensitive.conf"
 
 cleanup() {
-    if [[ -n "$ORIGINAL_MODE" && -e /etc/ssh/sshd_config ]]; then
-        chmod "$ORIGINAL_MODE" /etc/ssh/sshd_config 2>/dev/null || true
-    fi
-    rm -f "$DEMO_FILE" "$DEMO_BACKUP"
+    rm -f "$DEMO_FILE"
 }
 trap cleanup EXIT INT TERM
 
-# Create a test file in /etc-like location (but in /tmp for safety)
-if [[ ! -f /etc/passwd ]]; then
-    printf 'Cannot find /etc/passwd; demo cannot run.\n' >&2
-    exit 1
-fi
-
-# For demo: change permissions on a watched file to demonstrate detection.
-
 printf 'Simulated attack: file tampering detected\n'
-printf 'Expected detection: FIM-001 (permissions too broad)\n\n'
+printf 'Demo file: %s\n' "$DEMO_FILE"
+printf 'Expected transition: mode 600 -> 666 -> removed\n'
+printf 'Run: sudo ./hids.sh --config hids.demo.conf --module 4\n'
+printf 'Expected: [HIGH] FIM-001 Permissions on the demo file too broad\n\n'
 
-# Make /etc/ssh/sshd_config world-readable (bad)
-# First, check if we can do this
-if [[ -w /etc/ssh/sshd_config ]]; then
-    ORIGINAL_MODE="$(stat -c '%a' /etc/ssh/sshd_config)"
-    cp -p /etc/ssh/sshd_config "$DEMO_BACKUP"
-    chmod 644 /etc/ssh/sshd_config  # Should be 600
-    printf 'Changed /etc/ssh/sshd_config permissions to 644 (was 600)\n'
-    printf 'Run: sudo ./hids.sh --module 4\n'
-    printf 'Expected: [HIGH] FIM-001 Permissions on /etc/ssh/sshd_config too broad\n\n'
-    
-    # Give user time to run the check
-    printf 'Waiting 10 seconds before cleanup...\n'
-    sleep 10
-    
-    # Restore
-    if [[ -f "$DEMO_BACKUP" ]]; then
-        cp -p "$DEMO_BACKUP" /etc/ssh/sshd_config
-        chmod "$ORIGINAL_MODE" /etc/ssh/sshd_config
-        rm -f "$DEMO_BACKUP"
-        printf 'Restored /etc/ssh/sshd_config\n'
-    fi
-else
-    printf 'Insufficient permissions to modify /etc/ssh/sshd_config\n'
-    printf 'For demo, this script must be run as root.\n'
-    exit 1
-fi
+printf 'tamperable demo configuration\n' > "$DEMO_FILE"
+chmod 666 "$DEMO_FILE"
+printf 'Changed %s permissions to 666 (baseline mode is 600)\n' "$DEMO_FILE"
+printf 'Waiting 10 seconds before cleanup...\n'
+sleep 10
+printf 'Removed demo file and restored the host automatically\n'
