@@ -18,4 +18,8 @@ fi
 if "$ROOT_DIR/hids.sh" --config "$ROOT_DIR/hids.conf" --module 1 >/dev/null 2>&1; then
     :
 fi
+printf '0\n' | timeout 5 "$ROOT_DIR/menu" >/dev/null 2>&1 || {
+    printf 'Menu did not exit cleanly\n' >&2
+    exit 1
+}
 printf 'Smoke tests passed\n'

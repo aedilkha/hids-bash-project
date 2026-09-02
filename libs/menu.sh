@@ -256,7 +256,11 @@ main_loop() {
         print_menu
         
         printf "${C_BOLD}Enter your choice (0-9):${C_RESET} "
-        read -r choice
+        if ! IFS= read -r choice; then
+            printf '\n%sNo more input. Exiting menu.%s\n' "$C_YELLOW" "$C_RESET"
+            exit 0
+        fi
+        choice="${choice//[[:space:]]/}"
         
         case "$choice" in
             1)
